@@ -1,0 +1,10 @@
+---
+version: 2
+key: 'value'
+foo: 
+  bizz: 'bazz'
+
+#- name: build
+#  desc: This command will build the project
+#  shell:
+#    - uptime
