@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -49,7 +50,7 @@ func main() {
 
 	/* No commands asked for: show menu and exit */
 	if len(os.Args) == 1 {
-		display_menu(dex_file, 0, false)
+		display_menu(os.Stdout, dex_file, 0)
 		os.Exit(0)
 	}
 
@@ -57,7 +58,7 @@ func main() {
 	commands, err := resolve_cmd_to_codeblock(dex_file, os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: No commands were found at %v\n\nSee the menu:\n", os.Args[1:])
-		display_menu(dex_file, 0, true)
+		display_menu(os.Stderr, dex_file, 0)
 		os.Exit(1)
 	}
 
@@ -106,16 +107,16 @@ Display the menu by recursively processing each element of the DexFile and
 	showing the name and description for the command.  Children are indented with
 	4 spaces.
 */
-func display_menu(dex_file DexFile, indent int, to_stderr bool) {
+func display_menu(w io.Writer, dex_file DexFile, indent int) {
 	for _, elem := range dex_file {
-		if to_stderr == true {
-			fmt.Fprintf(os.Stderr, "%s%-24v: %v\n", strings.Repeat(" ", indent*4), elem.Name, elem.Desc)
-		} else {
-			fmt.Printf("%s%-24v: %v\n", strings.Repeat(" ", indent*4), elem.Name, elem.Desc)
-		}
+		//if to_stderr {
+		fmt.Fprintf(w, "%s%-24v: %v\n", strings.Repeat(" ", indent*4), elem.Name, elem.Desc)
+		//} else {
+		//	fmt.Printf("%s%-24v: %v\n", strings.Repeat(" ", indent*4), elem.Name, elem.Desc)
+		//}
 
 		if len(elem.Children) >= 1 {
-			display_menu(elem.Children, indent+1, to_stderr)
+			display_menu(w, elem.Children, indent+1)
 		}
 	}
 }

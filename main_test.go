@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
@@ -11,6 +12,19 @@ func check(t *testing.T, e error, s string) {
 	if e != nil {
 		t.Errorf("%s - %v", s, e)
 	}
+}
+
+func createTestConfig(t *testing.T, config string) *os.File {
+
+	data := []byte(config)
+
+	tcfg, err := os.CreateTemp("", "dex-test")
+	check(t, err, "Error creating temp cfg file")
+
+	_, err = tcfg.Write(data)
+	check(t, err, "Error writing to temp cfg file")
+
+	return tcfg
 }
 
 func TestFindConfigFile(t *testing.T) {
@@ -44,8 +58,6 @@ func TestFindConfigFile(t *testing.T) {
 
 	assert.Equal(t, cfg2, f2.Name())
 
-	t.Logf("cfg file %s", cfg)
-
 }
 
 type MenuData struct {
@@ -57,6 +69,7 @@ type ParseTest struct {
 	Name    string
 	Config  string
 	Dexfile DexFile
+	MenuOut string
 	// Menu   []MenuData
 }
 
@@ -119,24 +132,67 @@ func TestParseConfigFile(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Logf("test %s\n", test.Name)
 
-		data := []byte(test.Config)
-
-		tcfg, err := os.CreateTemp("", "dex-test")
-		check(t, err, "Error creating temp cfg file")
+		tcfg := createTestConfig(t, test.Config)
 
 		defer os.Remove(tcfg.Name())
-
-		_, err = tcfg.Write(data)
-		check(t, err, "Error writing to temp cfg file")
 
 		dex_file, err := parse_config_file(tcfg.Name())
 		check(t, err, "config file not found")
 
 		assert.Equal(t, dex_file, test.Dexfile)
 
-		t.Logf("%v", dex_file)
+	}
+
+}
+
+func TestDisplayMenu(t *testing.T) {
+
+	tests := []ParseTest{
+		{
+			Name: "Hello",
+			Config: `---
+                     - name: hello
+                       desc: this is a command description`,
+			MenuOut: "hello                   : this is a command description\n",
+		},
+		{
+			Name: "Hello Children",
+			Config: `---
+                     - name: hello
+                       desc: this is a command description
+                       children:
+                         - name: start
+                           desc: start the server
+                         - name: stop
+                           desc: stop the server
+                         - name: restart
+                           desc: restart the server
+`,
+			MenuOut: `hello                   : this is a command description
+    start                   : start the server
+    stop                    : stop the server
+    restart                 : restart the server
+`,
+		},
+	}
+
+	for _, test := range tests {
+		//t.Logf("test %s\n", test.Name)
+
+		tcfg := createTestConfig(t, test.Config)
+
+		defer os.Remove(tcfg.Name())
+
+		dex_file, err := parse_config_file(tcfg.Name())
+		check(t, err, "config file not found")
+
+		var output bytes.Buffer
+		display_menu(&output, dex_file, 0)
+
+		assert.Equal(t, test.MenuOut, output.String())
+
+		t.Logf("menu out\n %s", output.String())
 
 	}
 
