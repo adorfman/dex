@@ -66,11 +66,12 @@ type MenuData struct {
 	Depth int
 }
 type ParseTest struct {
-	Name    string
-	Config  string
-	Dexfile DexFile
-	MenuOut string
-	// Menu   []MenuData
+	Name      string
+	Config    string
+	Dexfile   DexFile
+	MenuOut   string
+	Blockpath []string
+	Block     []string
 }
 
 func TestParseConfigFile(t *testing.T) {
@@ -79,34 +80,27 @@ func TestParseConfigFile(t *testing.T) {
 		{
 			Name: "Hello",
 			Config: `---
-                     - name: hello
-                       desc: this is a command description`,
+- name: hello
+  desc: this is a command description`,
 			Dexfile: DexFile{
 				{
 					Name: "hello",
 					Desc: "this is a command description",
 				},
 			},
-			//Menu: []MenuData{
-			//	{
-			//		Name:  "hello",
-			//		Desc:  "hello",
-			//		Depth: 1,
-			//	},
-			//},
 		},
 		{
 			Name: "Hello Children",
 			Config: `---
-                     - name: hello
-                       desc: this is a command description
-                       children:
-                         - name: start
-                           desc: start the server
-                         - name: stop
-                           desc: stop the server
-                         - name: restart
-                           desc: restart the server
+- name: hello
+  desc: this is a command description
+  children:
+    - name: start
+      desc: start the server
+    - name: stop
+      desc: stop the server
+    - name: restart
+      desc: restart the server
 `,
 			Dexfile: DexFile{
 				{
@@ -152,22 +146,22 @@ func TestDisplayMenu(t *testing.T) {
 		{
 			Name: "Hello",
 			Config: `---
-                     - name: hello
-                       desc: this is a command description`,
+- name: hello
+  desc: this is a command description`,
 			MenuOut: "hello                   : this is a command description\n",
 		},
 		{
 			Name: "Hello Children",
 			Config: `---
-                     - name: hello
-                       desc: this is a command description
-                       children:
-                         - name: start
-                           desc: start the server
-                         - name: stop
-                           desc: stop the server
-                         - name: restart
-                           desc: restart the server
+- name: hello
+  desc: this is a command description
+  children:
+    - name: start
+      desc: start the server
+    - name: stop
+      desc: stop the server
+    - name: restart
+      desc: restart the server
 `,
 			MenuOut: `hello                   : this is a command description
     start                   : start the server
@@ -184,16 +178,54 @@ func TestDisplayMenu(t *testing.T) {
 
 		defer os.Remove(tcfg.Name())
 
-		dex_file, err := parse_config_file(tcfg.Name())
-		check(t, err, "config file not found")
+		dex_file, _ := parse_config_file(tcfg.Name())
 
 		var output bytes.Buffer
 		display_menu(&output, dex_file, 0)
 
 		assert.Equal(t, test.MenuOut, output.String())
 
-		t.Logf("menu out\n %s", output.String())
+		//t.Logf("menu out\n %s", output.String())
 
 	}
 
+}
+
+func TestResolveBlock(t *testing.T) {
+
+	tests := []ParseTest{
+		{
+			Name: "Nested Command",
+			Config: `---
+ - name: server 
+   desc: control the server 
+   children:
+     - name: start
+       desc: start the server
+     - name: stop
+       desc: stop the server
+     - name: restart
+       desc: restart the server
+       shell: 
+         - systemctl restart server
+         - touch /.restarted 
+
+`,
+			Blockpath: []string{"server", "restart"},
+		},
+	}
+
+	for _, test := range tests {
+
+		tcfg := createTestConfig(t, test.Config)
+
+		defer os.Remove(tcfg.Name())
+
+		dex_file, _ := parse_config_file(tcfg.Name())
+
+		block_cmds, _ := resolve_cmd_to_codeblock(dex_file, test.Blockpath)
+
+		assert.Equal(t, []string{"systemctl restart server", "touch /.restarted"}, block_cmds)
+
+	}
 }

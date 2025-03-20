@@ -109,11 +109,8 @@ Display the menu by recursively processing each element of the DexFile and
 */
 func display_menu(w io.Writer, dex_file DexFile, indent int) {
 	for _, elem := range dex_file {
-		//if to_stderr {
+
 		fmt.Fprintf(w, "%s%-24v: %v\n", strings.Repeat(" ", indent*4), elem.Name, elem.Desc)
-		//} else {
-		//	fmt.Printf("%s%-24v: %v\n", strings.Repeat(" ", indent*4), elem.Name, elem.Desc)
-		//}
 
 		if len(elem.Children) >= 1 {
 			display_menu(w, elem.Children, indent+1)
