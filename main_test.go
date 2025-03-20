@@ -60,11 +60,6 @@ func TestFindConfigFile(t *testing.T) {
 
 }
 
-type MenuData struct {
-	Name  string
-	Desc  string
-	Depth int
-}
 type ParseTest struct {
 	Name      string
 	Config    string
