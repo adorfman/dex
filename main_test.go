@@ -66,8 +66,8 @@ func TestParseConfigFile(t *testing.T) {
 		{
 			Name: "Hello",
 			Config: `---
-- name: hello
-  desc: this is a command description`,
+                     - name: hello
+                       desc: this is a command description`,
 			Dexfile: DexFile{
 				{
 					Name: "hello",
@@ -81,6 +81,40 @@ func TestParseConfigFile(t *testing.T) {
 			//		Depth: 1,
 			//	},
 			//},
+		},
+		{
+			Name: "Hello Children",
+			Config: `---
+                     - name: hello
+                       desc: this is a command description
+                       children:
+                         - name: start
+                           desc: start the server
+                         - name: stop
+                           desc: stop the server
+                         - name: restart
+                           desc: restart the server
+`,
+			Dexfile: DexFile{
+				{
+					Name: "hello",
+					Desc: "this is a command description",
+					Children: DexFile{
+						{
+							Name: "start",
+							Desc: "start the server",
+						},
+						{
+							Name: "stop",
+							Desc: "stop the server",
+						},
+						{
+							Name: "restart",
+							Desc: "restart the server",
+						},
+					},
+				},
+			},
 		},
 	}
 
