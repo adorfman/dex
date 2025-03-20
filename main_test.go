@@ -53,33 +53,56 @@ type MenuData struct {
 	Desc  string
 	Depth int
 }
-type MenuTest struct {
-	Name   string
-	Config string
-	Menu   []MenuData
+type ParseTest struct {
+	Name    string
+	Config  string
+	Dexfile DexFile
+	// Menu   []MenuData
 }
 
 func TestParseConfigFile(t *testing.T) {
-	tests := []MenuTest{
+
+	tests := []ParseTest{
 		{
 			Name: "Hello",
-			Config: `
-		    ---,
-            - name: hello
-              desc: this is a command description	
-			`,
-			Menu: []MenuData{
+			Config: `---
+- name: hello
+  desc: this is a command description`,
+			Dexfile: DexFile{
 				{
-					Name:  "hello",
-					Desc:  "hello",
-					Depth: 1,
+					Name: "hello",
+					Desc: "this is a command description",
 				},
 			},
+			//Menu: []MenuData{
+			//	{
+			//		Name:  "hello",
+			//		Desc:  "hello",
+			//		Depth: 1,
+			//	},
+			//},
 		},
 	}
 
 	for _, test := range tests {
 		t.Logf("test %s\n", test.Name)
+
+		data := []byte(test.Config)
+
+		tcfg, err := os.CreateTemp("", "dex-test")
+		check(t, err, "Error creating temp cfg file")
+
+		defer os.Remove(tcfg.Name())
+
+		_, err = tcfg.Write(data)
+		check(t, err, "Error writing to temp cfg file")
+
+		dex_file, err := parse_config_file(tcfg.Name())
+		check(t, err, "config file not found")
+
+		assert.Equal(t, dex_file, test.Dexfile)
+
+		t.Logf("%v", dex_file)
 
 	}
 
