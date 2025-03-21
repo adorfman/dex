@@ -141,7 +141,6 @@ func TestDisplayMenu(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		//t.Logf("test %s\n", test.Name)
 
 		tcfg, yamlData, _ := createTestConfig(t, test.Config)
 
@@ -153,8 +152,6 @@ func TestDisplayMenu(t *testing.T) {
 		displayMenu(&output, dex_file, 0)
 
 		assert.Equal(t, test.MenuOut, output.String())
-
-		//t.Logf("menu out\n %s", output.String())
 
 	}
 

@@ -18,19 +18,23 @@ type DexFile []struct {
 	Children DexFile  `yaml:"children"`
 }
 
-func Run(dex_file DexFile, args []string) {
+/*
+1. If there was no commands to run, display the menu of commands the DexFile knows about.
+2. If there was a command to run, find it and run it.  If it's invalid, say so and display the menu.
+*/
+func Run(dexFile DexFile, args []string) {
 
 	/* No commands asked for: show menu and exit */
 	if len(args) == 1 {
-		displayMenu(os.Stdout, dex_file, 0)
+		displayMenu(os.Stdout, dexFile, 0)
 		os.Exit(0)
 	}
 
 	/* No commands were found from the arguments the user passed: show error, menu and exit */
-	commands, err := resolveCmdToCodeblock(dex_file, args[1:])
+	commands, err := resolveCmdToCodeblock(dexFile, args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: No commands were found at %v\n\nSee the menu:\n", args[1:])
-		displayMenu(os.Stderr, dex_file, 0)
+		displayMenu(os.Stderr, dexFile, 0)
 		os.Exit(1)
 	}
 
@@ -38,15 +42,18 @@ func Run(dex_file DexFile, args []string) {
 	runCommands(commands)
 }
 
-func ParseConfig(yamlData []byte) (DexFile, error) {
+/*
+Attempt to parse the YAML content into DexFile format
+*/
+func ParseConfig(configData []byte) (DexFile, error) {
 
-	var dex_file DexFile
+	var dexFile DexFile
 
-	if err := yaml.Unmarshal([]byte(yamlData), &dex_file); err != nil {
+	if err := yaml.Unmarshal([]byte(configData), &dexFile); err != nil {
 		return nil, err
 	}
 
-	return dex_file, nil
+	return dexFile, nil
 }
 
 /*
@@ -55,8 +62,8 @@ Display the menu by recursively processing each element of the DexFile and
 	showing the name and description for the command.  Children are indented with
 	4 spaces.
 */
-func displayMenu(w io.Writer, dex_file DexFile, indent int) {
-	for _, elem := range dex_file {
+func displayMenu(w io.Writer, dexFile DexFile, indent int) {
+	for _, elem := range dexFile {
 
 		fmt.Fprintf(w, "%s%-24v: %v\n", strings.Repeat(" ", indent*4), elem.Name, elem.Desc)
 
@@ -73,8 +80,8 @@ Find the list of commands to run for a given command path.
 	then call itself with the child DexFile of foo, and cmd = ['bar', 'blee'].  Then bar's
 	child DexFile would be called with [ 'blee' ] and return the list of commands.
 */
-func resolveCmdToCodeblock(dex_file DexFile, cmds []string) ([]string, error) {
-	for _, elem := range dex_file {
+func resolveCmdToCodeblock(dexFile DexFile, cmds []string) ([]string, error) {
+	for _, elem := range dexFile {
 		if elem.Name == cmds[0] {
 			if len(cmds) >= 2 {
 				return resolveCmdToCodeblock(elem.Children, cmds[1:])

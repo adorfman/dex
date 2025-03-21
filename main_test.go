@@ -30,7 +30,7 @@ func TestFindConfigFile(t *testing.T) {
 
 	defer os.Remove(f2.Name())
 
-	config_file_locations = []string{"not-exists.yml", f.Name(), f2.Name()}
+	configFileLocations = []string{"not-exists.yml", f.Name(), f2.Name()}
 
 	cfg, err := findConfigFile()
 	check(t, err, "config file not found")
