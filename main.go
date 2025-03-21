@@ -10,8 +10,6 @@ import (
 	//	"strings"
 
 	v1 "dex/v1"
-
-	"github.com/goccy/go-yaml"
 )
 
 // Paths to search for dex files.
@@ -22,12 +20,12 @@ func config_files() []string {
 }
 
 /* Struct to turn the YAML file into */
-type DexFile []struct {
-	Name     string   `yaml:"name"`
-	Desc     string   `yaml:"desc"`
-	Commands []string `yaml:"shell"`
-	Children DexFile  `yaml:"children"`
-}
+//type DexFile []struct {
+//	Name     string   `yaml:"name"`
+//	Desc     string   `yaml:"desc"`
+//	Commands []string `yaml:"shell"`
+//	Children DexFile  `yaml:"children"`
+//}
 
 /*
 Main function:
@@ -39,7 +37,7 @@ Main function:
 func main() {
 
 	/* Find the name of the dex file we're using. */
-	filename, err := find_config_file()
+	filename, err := findConfigFile()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -79,22 +77,22 @@ func main() {
 //	run_commands(commands)
 //}
 
-func parse_config_file(filename string) (DexFile, error) {
-
-	/* Load the contents of the dex file */
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("could not read data from config file (%v): %w", filename, err)
-	}
-
-	/* Get the YAML structure from the contents of the dex file */
-	var dex_file DexFile
-	if err := yaml.Unmarshal([]byte(data), &dex_file); err != nil {
-		return nil, fmt.Errorf("could not parse YAML from file (%v): %s", filename, err)
-	}
-
-	return dex_file, nil
-}
+//func parse_config_file(filename string) (DexFile, error) {
+//
+//	/* Load the contents of the dex file */
+//	data, err := os.ReadFile(filename)
+//	if err != nil {
+//		return nil, fmt.Errorf("could not read data from config file (%v): %w", filename, err)
+//	}
+//
+//	/* Get the YAML structure from the contents of the dex file */
+//	var dex_file DexFile
+//	if err := yaml.Unmarshal([]byte(data), &dex_file); err != nil {
+//		return nil, fmt.Errorf("could not parse YAML from file (%v): %s", filename, err)
+//	}
+//
+//	return dex_file, nil
+//}
 
 //func ParseConfig(yamlData []byte) (DexFile, error) {
 //
@@ -130,7 +128,7 @@ Search through the config_files array and return the first
 
 	dex file that exists.
 */
-func find_config_file() (string, error) {
+func findConfigFile() (string, error) {
 	config_files := config_files()
 
 	for _, filename := range config_files {
