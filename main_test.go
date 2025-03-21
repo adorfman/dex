@@ -60,18 +60,18 @@ func TestFindConfigFile(t *testing.T) {
 
 }
 
-type ParseTest struct {
+type DexTest struct {
 	Name      string
 	Config    string
 	Dexfile   DexFile
 	MenuOut   string
 	Blockpath []string
-	Block     []string
+	Commands  []string
 }
 
 func TestParseConfigFile(t *testing.T) {
 
-	tests := []ParseTest{
+	tests := []DexTest{
 		{
 			Name: "Hello",
 			Config: `---
@@ -137,7 +137,7 @@ func TestParseConfigFile(t *testing.T) {
 
 func TestDisplayMenu(t *testing.T) {
 
-	tests := []ParseTest{
+	tests := []DexTest{
 		{
 			Name: "Hello",
 			Config: `---
@@ -188,7 +188,7 @@ func TestDisplayMenu(t *testing.T) {
 
 func TestResolveBlock(t *testing.T) {
 
-	tests := []ParseTest{
+	tests := []DexTest{
 		{
 			Name: "Nested Command",
 			Config: `---
@@ -207,6 +207,7 @@ func TestResolveBlock(t *testing.T) {
 
 `,
 			Blockpath: []string{"server", "restart"},
+			Commands:  []string{"systemctl restart server", "touch /.restarted"},
 		},
 	}
 
@@ -220,7 +221,7 @@ func TestResolveBlock(t *testing.T) {
 
 		block_cmds, _ := resolve_cmd_to_codeblock(dex_file, test.Blockpath)
 
-		assert.Equal(t, []string{"systemctl restart server", "touch /.restarted"}, block_cmds)
+		assert.Equal(t, test.Commands, block_cmds)
 
 	}
 }
