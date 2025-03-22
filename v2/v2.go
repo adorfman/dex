@@ -37,7 +37,7 @@ type Block struct {
 type DexFile2 struct {
 	Version int                    `yaml:"version"`
 	Vars    map[string]interface{} `yaml:"vars"`
-	Blocks  []Block
+	Blocks  []Block                `yaml:"blocks"`
 }
 
 /*

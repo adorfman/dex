@@ -49,9 +49,12 @@ func TestParseConfigFile(t *testing.T) {
 		{
 			Name: "Hello",
 			Config: `---
-- name: hello
-  desc: this is a command description`,
+version: 2
+blocks:
+  - name: hello
+    desc: this is a command description`,
 			Dexfile: DexFile2{
+				Version: 2,
 				Blocks: []Block{
 					{
 						Name: "hello",
@@ -63,17 +66,20 @@ func TestParseConfigFile(t *testing.T) {
 		{
 			Name: "Hello Children",
 			Config: `---
-- name: hello
-  desc: this is a command description
-  children:
-    - name: start
-      desc: start the server
-    - name: stop
-      desc: stop the server
-    - name: restart
-      desc: restart the server
+version: 2
+blocks:
+  - name: hello
+    desc: this is a command description
+    children:
+      - name: start
+        desc: start the server
+      - name: stop
+        desc: stop the server
+      - name: restart
+        desc: restart the server
 `,
 			Dexfile: DexFile2{
+				Version: 2,
 				Blocks: []Block{
 					{
 						Name: "hello",
@@ -107,7 +113,7 @@ func TestParseConfigFile(t *testing.T) {
 		dex_file, err := ParseConfig(yamlData)
 		check(t, err, "config file not found")
 
-		assert.Equal(t, dex_file, test.Dexfile)
+		assert.Equal(t, test.Dexfile, dex_file)
 
 	}
 
