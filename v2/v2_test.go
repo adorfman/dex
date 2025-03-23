@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,13 +36,14 @@ func createTestConfig(t *testing.T, config string) (*os.File, []byte, error) {
 }
 
 type DexTest struct {
-	Name       string
-	Config     string
-	Dexfile    DexFile2
-	MenuOut    string
-	Blockpath  []string
-	Commands   []Command
-	CommandOut string
+	Name         string
+	Config       string
+	Dexfile      DexFile2
+	MenuOut      string
+	Blockpath    []string
+	Commands     []Command
+	CommandOut   string
+	ExpectedVars map[string]VarCfg
 }
 
 func TestParseConfigFile(t *testing.T) {
@@ -208,11 +210,11 @@ blocks:
 
 		check(t, err, "Error parsing config")
 
-		block_cmds, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
+		block, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
 
 		check(t, err, "Error resolving command")
 
-		assert.Equal(t, test.Commands, block_cmds)
+		assert.Equal(t, test.Commands, block.Commands)
 
 	}
 }
@@ -246,7 +248,7 @@ blocks:
 
 		check(t, err, "Error parsing config")
 
-		block_cmds, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
+		block, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
 
 		check(t, err, "Error resolving command")
 
@@ -257,7 +259,7 @@ blocks:
 			Stderr: &output,
 		}
 
-		runCommandsWithConfig(block_cmds, config)
+		runCommandsWithConfig(block.Commands, config)
 
 		assert.Equal(t, test.CommandOut, output.String())
 
@@ -268,7 +270,7 @@ func TestVars(t *testing.T) {
 
 	tests := []DexTest{
 		{
-			Name: "Nested Command",
+			Name: "Global Vars",
 			Config: `---
 version: 2
 vars: 
@@ -285,7 +287,20 @@ blocks:
 `,
 			Blockpath:  []string{"hello_world"},
 			CommandOut: "hello world\n",
-			//Commands:  []Command{{Exec: "systemctl restart server"}, {Exec: "touch /.restarted"}},
+			ExpectedVars: map[string]VarCfg{
+				"string_var": {
+					Value: "hi there",
+				},
+				"int_var": {
+					Value: "2",
+				},
+				"list_var": {
+					ListValue: []string{
+						"these",
+						"those",
+					},
+				},
+			},
 		},
 	}
 
@@ -304,9 +319,6 @@ blocks:
 		t.Logf("%s", VarCfgs)
 		t.Logf("string var is %s", VarCfgs["string_var"].Value)
 
-		//commands, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
-
-		//check(t, err, "Error resolving command")
-
+		assert.True(t, reflect.DeepEqual(test.ExpectedVars, VarCfgs))
 	}
 }

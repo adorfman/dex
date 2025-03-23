@@ -64,18 +64,22 @@ func Run(dexFile DexFile2, args []string) {
 		displayMenu(os.Stdout, dexFile.Blocks, 0)
 		os.Exit(0)
 	}
+
+	block, err := resolveCmdToCodeblock(dexFile.Blocks, args[1:])
 	//
 	// /* No commands were found from the arguments the user passed: show error, menu and exit */
-	commands, err := resolveCmdToCodeblock(dexFile.Blocks, args[1:])
 	//
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: No commands were found at %v\n\nSee the menu:\n", args[1:])
 		displayMenu(os.Stderr, dexFile.Blocks, 0)
 		os.Exit(1)
 	}
+
+	initVars(dexFile.Vars)
+
 	//
 	// /* Found commands: run them */
-	runCommands(commands)
+	processBloack(block)
 }
 
 /*
@@ -111,17 +115,17 @@ func displayMenu(w io.Writer, blocks []Block, indent int) {
 	}
 }
 
-func resolveCmdToCodeblock(blocks []Block, cmds []string) ([]Command, error) {
+func resolveCmdToCodeblock(blocks []Block, cmds []string) (Block, error) {
 	for _, elem := range blocks {
 		if elem.Name == cmds[0] {
 			if len(cmds) >= 2 {
 				return resolveCmdToCodeblock(elem.Children, cmds[1:])
 			} else {
-				return elem.Commands, nil
+				return elem, nil
 			}
 		}
 	}
-	return []Command{}, errors.New("could not find command")
+	return Block{}, errors.New("could not find command")
 }
 
 func initVars(varMap map[string]interface{}) {
@@ -158,6 +162,12 @@ func initVars(varMap map[string]interface{}) {
 			fmt.Printf("I don't know about type %T for %s!\n", typeVal, varName)
 		}
 	}
+}
+
+func processBloack(block Block) {
+
+	initVars(block.Vars)
+	runCommands(block.Commands)
 }
 
 type CommandConfig struct {
