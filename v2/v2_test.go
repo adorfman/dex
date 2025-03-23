@@ -1,7 +1,7 @@
 package v2
 
 import (
-	//"bytes"
+	"bytes"
 	"io"
 	"os"
 	"testing"
@@ -40,7 +40,7 @@ type DexTest struct {
 	Dexfile   DexFile2
 	MenuOut   string
 	Blockpath []string
-	Commands  []string
+	Commands  []Command
 }
 
 func TestParseConfigFile(t *testing.T) {
@@ -117,4 +117,101 @@ blocks:
 
 	}
 
+}
+
+func TestDisplayMenu(t *testing.T) {
+
+	tests := []DexTest{
+		{
+			Name: "Hello",
+			Config: `---
+version: 2
+blocks:
+  - name: hello
+    desc: this is a command description`,
+			MenuOut: "hello                   : this is a command description\n",
+		},
+		{
+			Name: "Hello Children",
+			Config: `---
+version: 2
+blocks:
+  - name: hello
+    desc: this is a command description
+    children:
+      - name: start
+        desc: start the server
+      - name: stop
+        desc: stop the server
+      - name: restart
+        desc: restart the server
+`,
+			MenuOut: `hello                   : this is a command description
+    start                   : start the server
+    stop                    : stop the server
+    restart                 : restart the server
+`,
+		},
+	}
+
+	for _, test := range tests {
+
+		tcfg, yamlData, _ := createTestConfig(t, test.Config)
+
+		defer os.Remove(tcfg.Name())
+
+		dex_file, _ := ParseConfig(yamlData)
+
+		var output bytes.Buffer
+		displayMenu(&output, dex_file.Blocks, 0)
+
+		assert.Equal(t, test.MenuOut, output.String())
+
+	}
+
+}
+
+func TestResolveBlock(t *testing.T) {
+
+	tests := []DexTest{
+		{
+			Name: "Nested Command",
+			Config: `---
+version: 2
+blocks:
+  - name: server 
+    desc: this is a command description
+    children:
+      - name: start
+        desc: start the server
+      - name: stop
+        desc: stop the server
+      - name: restart
+        desc: restart the server
+        commands: 
+          - exec: systemctl restart server
+          - exec: touch /.restarted 
+`,
+			Blockpath: []string{"server", "restart"},
+			Commands:  []Command{{Exec: "systemctl restart server"}, {Exec: "touch /.restarted"}},
+		},
+	}
+
+	for _, test := range tests {
+
+		tcfg, yamlData, _ := createTestConfig(t, test.Config)
+
+		defer os.Remove(tcfg.Name())
+
+		dex_file, err := ParseConfig(yamlData)
+
+		check(t, err, "Error parsing config")
+
+		block_cmds, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
+
+		check(t, err, "Error resolving command")
+
+		assert.Equal(t, test.Commands, block_cmds)
+
+	}
 }
