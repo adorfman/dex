@@ -263,3 +263,50 @@ blocks:
 
 	}
 }
+
+func TestVars(t *testing.T) {
+
+	tests := []DexTest{
+		{
+			Name: "Nested Command",
+			Config: `---
+version: 2
+vars: 
+  string_var: "hi there"
+  int_var: 2 
+  list_var:
+    - these
+    - those
+blocks:
+  - name: hello_world 
+    desc: this is a command description
+    commands: 
+       - exec: echo "hello world"
+`,
+			Blockpath:  []string{"hello_world"},
+			CommandOut: "hello world\n",
+			//Commands:  []Command{{Exec: "systemctl restart server"}, {Exec: "touch /.restarted"}},
+		},
+	}
+
+	for _, test := range tests {
+
+		tcfg, yamlData, _ := createTestConfig(t, test.Config)
+
+		defer os.Remove(tcfg.Name())
+
+		dex_file, err := ParseConfig(yamlData)
+
+		check(t, err, "Error parsing config")
+
+		initVars(dex_file.Vars)
+
+		t.Logf("%s", VarCfgs)
+		t.Logf("string var is %s", VarCfgs["string_var"].Value)
+
+		//commands, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
+
+		//check(t, err, "Error resolving command")
+
+	}
+}

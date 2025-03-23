@@ -6,16 +6,28 @@ import (
 	"io"
 	"os"
 
+	//    "reflect"
 	"os/exec"
 	"strings"
 
 	"github.com/goccy/go-yaml"
 )
 
+var VarCfgs = map[string]VarCfg{}
+
 type VarCfg struct {
+	Value       string
+	ListValue   []string
 	FromCommand string `yaml:"from_command"`
 	FromEnv     string `yaml:"from_env"`
 	Default     string `yaml:"default"`
+}
+
+type ListVarCfg struct {
+	Value       []string
+	FromCommand string   `yaml:"from_command"`
+	FromEnv     string   `yaml:"from_env"`
+	Default     []string `yaml:"default"`
 }
 
 type Command struct {
@@ -110,6 +122,42 @@ func resolveCmdToCodeblock(blocks []Block, cmds []string) ([]Command, error) {
 		}
 	}
 	return []Command{}, errors.New("could not find command")
+}
+
+func initVars(varMap map[string]interface{}) {
+	for varName, value := range varMap {
+
+		switch typeVal := value.(type) {
+		case []interface{}:
+
+			VarCfgs[varName] = VarCfg{
+				ListValue: []string{},
+			}
+
+			for _, elem := range typeVal {
+
+				entry := VarCfgs[varName]
+				entry.ListValue = append(entry.ListValue, elem.(string))
+
+				VarCfgs[varName] = entry
+			}
+
+		case uint64:
+
+			VarCfgs[varName] = VarCfg{
+				//Value: string(typeVal),
+				Value: fmt.Sprintf("%d", typeVal),
+			}
+
+		case string:
+
+			VarCfgs[varName] = VarCfg{
+				Value: typeVal,
+			}
+		default:
+			fmt.Printf("I don't know about type %T for %s!\n", typeVal, varName)
+		}
+	}
 }
 
 type CommandConfig struct {
