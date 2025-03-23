@@ -302,9 +302,55 @@ blocks:
 				},
 			},
 		},
+		{
+			Name: "Block Vars",
+			Config: `---
+version: 2
+vars: 
+  global_string: "foobar"
+
+blocks:
+  - name: block_vars 
+    desc: this is a command description
+    vars: 
+      string_var: "from block"
+      int_var: 3 
+      list_var:
+        - one 
+        - two 
+    commands: 
+       - exec: echo "hello world"
+  - name: other_block 
+    desc: this is a command description
+    vars: 
+      string_var: "other local block var"
+
+`,
+			Blockpath:  []string{"block_vars"},
+			CommandOut: "hello world\n",
+			ExpectedVars: map[string]VarCfg{
+				"global_string": {
+					Value: "foobar",
+				},
+				"string_var": {
+					Value: "from block",
+				},
+				"int_var": {
+					Value: "3",
+				},
+				"list_var": {
+					ListValue: []string{
+						"one",
+						"two",
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
+
+		VarCfgs = map[string]VarCfg{}
 
 		tcfg, yamlData, _ := createTestConfig(t, test.Config)
 
@@ -316,8 +362,14 @@ blocks:
 
 		initVars(dex_file.Vars)
 
-		t.Logf("%s", VarCfgs)
-		t.Logf("string var is %s", VarCfgs["string_var"].Value)
+		block, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
+
+		check(t, err, "Error resolving command")
+
+		initVars(block.Vars)
+
+		//t.Logf("%s", VarCfgs)
+		//t.Logf("string var is %s", VarCfgs["string_var"].Value)
 
 		assert.True(t, reflect.DeepEqual(test.ExpectedVars, VarCfgs))
 	}
