@@ -35,12 +35,13 @@ func createTestConfig(t *testing.T, config string) (*os.File, []byte, error) {
 }
 
 type DexTest struct {
-	Name      string
-	Config    string
-	Dexfile   DexFile2
-	MenuOut   string
-	Blockpath []string
-	Commands  []Command
+	Name       string
+	Config     string
+	Dexfile    DexFile2
+	MenuOut    string
+	Blockpath  []string
+	Commands   []Command
+	CommandOut string
 }
 
 func TestParseConfigFile(t *testing.T) {
@@ -212,6 +213,53 @@ blocks:
 		check(t, err, "Error resolving command")
 
 		assert.Equal(t, test.Commands, block_cmds)
+
+	}
+}
+
+func TestCommands(t *testing.T) {
+
+	tests := []DexTest{
+		{
+			Name: "Nested Command",
+			Config: `---
+version: 2
+blocks:
+  - name: hello_world 
+    desc: this is a command description
+    commands: 
+       - exec: echo "hello world"
+`,
+			Blockpath:  []string{"hello_world"},
+			CommandOut: "hello world\n",
+			//Commands:  []Command{{Exec: "systemctl restart server"}, {Exec: "touch /.restarted"}},
+		},
+	}
+
+	for _, test := range tests {
+
+		tcfg, yamlData, _ := createTestConfig(t, test.Config)
+
+		defer os.Remove(tcfg.Name())
+
+		dex_file, err := ParseConfig(yamlData)
+
+		check(t, err, "Error parsing config")
+
+		block_cmds, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
+
+		check(t, err, "Error resolving command")
+
+		var output bytes.Buffer
+
+		config := CommandConfig{
+			Stdout: &output,
+			Stderr: &output,
+		}
+
+		runCommandsWithConfig(block_cmds, config)
+
+		assert.Equal(t, test.CommandOut, output.String())
 
 	}
 }
