@@ -10,29 +10,54 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func check(t *testing.T, e error, s string) {
+func check(t *testing.T, e error, s string) error {
 	if e != nil {
 		t.Errorf("%s - %v", s, e)
+		return e
 	}
+	return nil
 }
 
 func createTestConfig(t *testing.T, config string) (*os.File, []byte, error) {
 
 	data := []byte(config)
 
-	tcfg, err := os.CreateTemp("", "dex-test")
+	tDexFile, err := os.CreateTemp("", "dex-test")
 	check(t, err, "Error creating temp cfg file")
 
-	_, err = tcfg.Write(data)
+	_, err = tDexFile.Write(data)
 	check(t, err, "Error writing to temp cfg file")
 
-	yamlFile, err := os.Open(tcfg.Name())
+	yamlFile, err := os.Open(tDexFile.Name())
 	check(t, err, "Error opening temp yaml file")
 
 	yamlData, err := io.ReadAll(yamlFile)
 	check(t, err, "Error reading yaml data")
 
-	return tcfg, yamlData, nil
+	return tDexFile, yamlData, nil
+}
+
+func setupTestBlock(t *testing.T, test DexTest) (Block, *os.File, error) {
+
+	tDexFile, yamlData, _ := createTestConfig(t, test.Config)
+
+	dexFile, err := ParseConfig(yamlData)
+
+	if err := check(t, err, "Error parsing config"); err != nil {
+		return Block{}, nil, err
+	}
+
+	initVars(dexFile.Vars)
+
+	block, err := resolveCmdToCodeblock(dexFile.Blocks, test.Blockpath)
+
+	if err := check(t, err, "Error resolving command"); err != nil {
+		return Block{}, nil, err
+	}
+
+	initVars(block.Vars)
+
+	return block, tDexFile, nil
 }
 
 type DexTest struct {
@@ -254,7 +279,7 @@ blocks:
 
 		var output bytes.Buffer
 
-		config := CommandConfig{
+		config := ExecConfig{
 			Stdout: &output,
 			Stderr: &output,
 		}
@@ -350,8 +375,6 @@ blocks:
 
 	for _, test := range tests {
 
-		VarCfgs = map[string]VarCfg{}
-
 		tcfg, yamlData, _ := createTestConfig(t, test.Config)
 
 		defer os.Remove(tcfg.Name())
@@ -435,8 +458,6 @@ blocks:
 
 	for _, test := range tests {
 
-		VarCfgs = map[string]VarCfg{}
-
 		tcfg, yamlData, _ := createTestConfig(t, test.Config)
 
 		defer os.Remove(tcfg.Name())
@@ -454,7 +475,7 @@ blocks:
 		initVars(block.Vars)
 		var output bytes.Buffer
 
-		config := CommandConfig{
+		config := ExecConfig{
 			Stdout: &output,
 			Stderr: &output,
 		}
@@ -464,6 +485,94 @@ blocks:
 		assert.Equal(t, test.CommandOut, output.String())
 
 		//t.Logf("%s", VarCfgs)
+		//t.Logf("string var is %s", VarCfgs["string_var"].Value)
+
+		//assert.True(t, reflect.DeepEqual(test.ExpectedVars, VarCfgs))
+	}
+}
+
+func TestCommandDir(t *testing.T) {
+
+	tests := []DexTest{
+		{
+			Name: "Global Vars",
+			Config: `---
+version: 2
+vars: 
+  string_var: "hi there"
+blocks:
+  - name: change_dir 
+    dir:  ".." 
+    desc: this is a command description
+    commands: 
+       - exec: echo $(pwd)
+`,
+			Blockpath:  []string{"change_dir"},
+			CommandOut: "hi there\n",
+		},
+		//		{
+		//			Name: "Block Vars",
+		//			Config: `---
+		//version: 2
+		//vars:
+		//  global_string: "foobar"
+		//
+		//blocks:
+		//  - name: block_vars
+		//    desc: this is a command description
+		//    vars:
+		//      string_var: "from block"
+		//      int_var: 3
+		//    commands:
+		//       - exec: echo "[% global_string %] [% string_var %] [% int_var %]"
+		//`,
+		//			Blockpath:  []string{"block_vars"},
+		//			CommandOut: "foobar from block 3\n",
+		//		},
+		//		{
+		//			Name: "Diag",
+		//			Config: `---
+		//version: 2
+		//vars:
+		//  global_string: "foobar"
+		//
+		//blocks:
+		//  - name: diag_command
+		//    desc: this is a command description
+		//    vars:
+		//      string_var: "from block"
+		//      int_var: 4
+		//    commands:
+		//       - diag: "[% global_string %] [% string_var %] [% int_var %]"
+		//`,
+		//			Blockpath:  []string{"diag_command"},
+		//			CommandOut: "foobar from block 4\n",
+		//		},
+	}
+
+	for _, test := range tests {
+
+		block, tcfg, err := setupTestBlock(t, test)
+
+		if err := check(t, err, "error setting up test"); err != nil {
+			continue
+		}
+
+		defer os.Remove(tcfg.Name())
+
+		var output bytes.Buffer
+
+		config := ExecConfig{
+			Stdout: &output,
+			Stderr: &output,
+			Dir:    block.Dir,
+		}
+
+		runCommandsWithConfig(block.Commands, config)
+
+		//assert.Equal(t, test.CommandOut, output.String())
+
+		t.Logf("%s", output.String())
 		//t.Logf("string var is %s", VarCfgs["string_var"].Value)
 
 		//assert.True(t, reflect.DeepEqual(test.ExpectedVars, VarCfgs))

@@ -82,7 +82,7 @@ func Run(dexFile DexFile2, args []string) {
 
 	//
 	// /* Found commands: run them */
-	processBloack(block)
+	processBlock(block)
 }
 
 /*
@@ -172,6 +172,9 @@ var tt = template.New("variable_parser")
 
 func render(tmpl string) string {
 
+	/*
+	   Converting from the template format established in the perl version
+	*/
 	t1, err := tt.Parse(fixupRe.ReplaceAllString(tmpl, "{{ .$1.Value }}"))
 	if err != nil {
 		panic(err)
@@ -184,44 +187,69 @@ func render(tmpl string) string {
 	return renderBuf.String()
 }
 
-func processBloack(block Block) {
+func processBlock(block Block) {
 
 	initVars(block.Vars)
-	runCommands(block.Commands)
-}
 
-type CommandConfig struct {
-	Stdout io.Writer
-	Stderr io.Writer
-}
-
-func runCommands(commands []Command) {
-
-	config := CommandConfig{
+	config := ExecConfig{
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
 
-	runCommandsWithConfig(commands, config)
+	if len(block.Dir) > 0 {
+		config.Dir = block.Dir
+	} else {
+		dir, err := os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "cannot get current working directory \n")
+			return
+		} else {
+			config.Dir = dir
+		}
+
+	}
+
+	runCommandsWithConfig(block.Commands, config)
 }
 
-func runCommandsWithConfig(commands []Command, config CommandConfig) {
+type ExecConfig struct {
+	Stdout io.Writer
+	Stderr io.Writer
+	Dir    string
+}
+
+//func runCommands(commands []Command) {
+//
+//
+//	runCommandsWithConfig(commands, config)
+//}
+
+func runCommandsWithConfig(commands []Command, config ExecConfig) {
 	for _, command := range commands {
 
-		if len(command.Exec) > 0 {
-			runCommand(exec.Command("/bin/bash", "-c", render(command.Exec)), config)
+		if len(command.Dir) > 0 {
+			config.Dir = render(command.Dir)
 		}
+
 		if len(command.Diag) > 0 {
-			runCommand(exec.Command("/usr/bin/echo", render(command.Diag)), config)
+			execCommand(exec.Command("/usr/bin/echo", render(command.Diag)), config)
 		}
+
+		if len(command.Exec) > 0 {
+			execCommand(exec.Command("/bin/bash", "-c", render(command.Exec)), config)
+		}
+
 	}
 }
 
-func runCommand(cmd *exec.Cmd, config CommandConfig) {
+func execCommand(cmd *exec.Cmd, config ExecConfig) {
 
 	//cmd := exec.Command("/bin/bash", "-c", render(cmd_str))
 	cmd.Stdout = config.Stdout
 	cmd.Stderr = config.Stderr
+	cmd.Dir = config.Dir
+
+	fmt.Fprintln(os.Stderr, "dir: ", config.Dir, "-")
 
 	err := cmd.Run()
 	if err != nil {
