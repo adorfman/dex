@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -69,6 +70,7 @@ type DexTest struct {
 	Commands     []Command
 	CommandOut   string
 	ExpectedVars map[string]VarCfg
+	Custom       func(t *testing.T, test DexTest, opts map[string]interface{})
 }
 
 func TestParseConfigFile(t *testing.T) {
@@ -507,8 +509,17 @@ blocks:
     commands: 
        - exec: echo $(pwd)
 `,
-			Blockpath:  []string{"change_dir"},
-			CommandOut: "hi there\n",
+			Blockpath: []string{"change_dir"},
+			Custom: func(t *testing.T, test DexTest, opts map[string]interface{}) {
+
+				output := opts["ouput"].(bytes.Buffer)
+
+				path, _ := os.Getwd()
+
+				parentDir := filepath.Dir(path) + "\n"
+
+				assert.Equal(t, parentDir, output.String())
+			},
 		},
 		//		{
 		//			Name: "Block Vars",
@@ -552,13 +563,13 @@ blocks:
 
 	for _, test := range tests {
 
-		block, tcfg, err := setupTestBlock(t, test)
+		block, tDexFile, err := setupTestBlock(t, test)
+
+		defer os.Remove(tDexFile.Name())
 
 		if err := check(t, err, "error setting up test"); err != nil {
 			continue
 		}
-
-		defer os.Remove(tcfg.Name())
 
 		var output bytes.Buffer
 
@@ -573,6 +584,7 @@ blocks:
 		//assert.Equal(t, test.CommandOut, output.String())
 
 		t.Logf("%s", output.String())
+		test.Custom(t, test, map[string]interface{}{"ouput": output})
 		//t.Logf("string var is %s", VarCfgs["string_var"].Value)
 
 		//assert.True(t, reflect.DeepEqual(test.ExpectedVars, VarCfgs))

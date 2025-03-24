@@ -152,7 +152,6 @@ func initVars(varMap map[string]interface{}) {
 		case uint64:
 
 			VarCfgs[varName] = VarCfg{
-				//Value: string(typeVal),
 				Value: fmt.Sprintf("%d", typeVal),
 			}
 
@@ -255,5 +254,11 @@ func execCommand(cmd *exec.Cmd, config ExecConfig) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to run command: ", err)
 	}
+
+	//if err := cmd.Run(); err != nil {
+	//	if exitError, ok := err.(*exec.ExitError); ok {
+	//		return exitError.ExitCode()
+	//	}
+	//}
 
 }
