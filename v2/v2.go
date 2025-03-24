@@ -207,13 +207,25 @@ func runCommands(commands []Command) {
 
 func runCommandsWithConfig(commands []Command, config CommandConfig) {
 	for _, command := range commands {
-		cmd := exec.Command("/bin/bash", "-c", render(command.Exec))
-		cmd.Stdout = config.Stdout
-		cmd.Stderr = config.Stderr
 
-		err := cmd.Run()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Failed to run command: ", err)
+		if len(command.Exec) > 0 {
+			runCommand(exec.Command("/bin/bash", "-c", render(command.Exec)), config)
+		}
+		if len(command.Diag) > 0 {
+			runCommand(exec.Command("/usr/bin/echo", render(command.Diag)), config)
 		}
 	}
+}
+
+func runCommand(cmd *exec.Cmd, config CommandConfig) {
+
+	//cmd := exec.Command("/bin/bash", "-c", render(cmd_str))
+	cmd.Stdout = config.Stdout
+	cmd.Stderr = config.Stderr
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to run command: ", err)
+	}
+
 }

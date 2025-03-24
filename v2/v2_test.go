@@ -375,7 +375,7 @@ blocks:
 	}
 }
 
-func TestRender(t *testing.T) {
+func TestRenderedCommand(t *testing.T) {
 
 	tests := []DexTest{
 		{
@@ -393,50 +393,44 @@ blocks:
 			Blockpath:  []string{"hello_world"},
 			CommandOut: "hi there\n",
 		},
-		//		{
-		//			Name: "Block Vars",
-		//			Config: `---
-		//version: 2
-		//vars:
-		//  global_string: "foobar"
-		//
-		//blocks:
-		//  - name: block_vars
-		//    desc: this is a command description
-		//    vars:
-		//      string_var: "from block"
-		//      int_var: 3
-		//      list_var:
-		//        - one
-		//        - two
-		//    commands:
-		//       - exec: echo "hello world"
-		//  - name: other_block
-		//    desc: this is a command description
-		//    vars:
-		//      string_var: "other local block var"
-		//
-		//`,
-		//			Blockpath:  []string{"block_vars"},
-		//			CommandOut: "hello world\n",
-		//			ExpectedVars: map[string]VarCfg{
-		//				"global_string": {
-		//					Value: "foobar",
-		//				},
-		//				"string_var": {
-		//					Value: "from block",
-		//				},
-		//				"int_var": {
-		//					Value: "3",
-		//				},
-		//				"list_var": {
-		//					ListValue: []string{
-		//						"one",
-		//						"two",
-		//					},
-		//				},
-		//			},
-		//		},
+		{
+			Name: "Block Vars",
+			Config: `---
+version: 2
+vars:
+  global_string: "foobar"
+
+blocks:
+  - name: block_vars
+    desc: this is a command description
+    vars:
+      string_var: "from block"
+      int_var: 3
+    commands:
+       - exec: echo "[% global_string %] [% string_var %] [% int_var %]"
+`,
+			Blockpath:  []string{"block_vars"},
+			CommandOut: "foobar from block 3\n",
+		},
+		{
+			Name: "Diag",
+			Config: `---
+version: 2
+vars:
+  global_string: "foobar"
+
+blocks:
+  - name: diag_command 
+    desc: this is a command description
+    vars:
+      string_var: "from block"
+      int_var: 4
+    commands:
+       - diag: "[% global_string %] [% string_var %] [% int_var %]"
+`,
+			Blockpath:  []string{"diag_command"},
+			CommandOut: "foobar from block 4\n",
+		},
 	}
 
 	for _, test := range tests {
