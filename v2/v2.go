@@ -1,10 +1,13 @@
 package v2
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
+	"text/template"
 
 	//    "reflect"
 	"os/exec"
@@ -164,6 +167,23 @@ func initVars(varMap map[string]interface{}) {
 	}
 }
 
+var fixupRe = regexp.MustCompile(`\[%\s*(\S+)\s*%\]`)
+var tt = template.New("variable_parser")
+
+func render(tmpl string) string {
+
+	t1, err := tt.Parse(fixupRe.ReplaceAllString(tmpl, "{{ .$1.Value }}"))
+	if err != nil {
+		panic(err)
+	}
+
+	var renderBuf bytes.Buffer
+
+	t1.Execute(&renderBuf, VarCfgs)
+
+	return renderBuf.String()
+}
+
 func processBloack(block Block) {
 
 	initVars(block.Vars)
@@ -187,7 +207,7 @@ func runCommands(commands []Command) {
 
 func runCommandsWithConfig(commands []Command, config CommandConfig) {
 	for _, command := range commands {
-		cmd := exec.Command("/bin/bash", "-c", command.Exec)
+		cmd := exec.Command("/bin/bash", "-c", render(command.Exec))
 		cmd.Stdout = config.Stdout
 		cmd.Stderr = config.Stderr
 
