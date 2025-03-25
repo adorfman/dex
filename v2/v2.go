@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"regexp"
 	"text/template"
 
 	//    "reflect"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -234,7 +236,7 @@ func render(tmpl string, varCfgs map[string]VarCfg) string {
 func initBlockCommands(block *Block) {
 	for _, command := range block.CommandsRaw {
 
-		/* All this because for-vars can be a string or list */
+		/* All this because for-vars can be a string referncing a list or list */
 		Command := Command{}
 
 		if command["exec"] != nil {
@@ -248,16 +250,24 @@ func initBlockCommands(block *Block) {
 		}
 		if command["for-vars"] != nil {
 			switch typeVal := command["for-vars"].(type) {
-			case []string:
-				Command.ForVars = typeVal
+			case []interface{}:
+
+				for _, elem := range typeVal {
+
+					Command.ForVars = append(Command.ForVars, elem.(string))
+
+				}
+
 			case string:
 
-				if list := VarCfgs[typeVal].ListValue; list != nil {
-					Command.ForVars = list
+				if list := VarCfgs[typeVal]; list.ListValue != nil {
+					Command.ForVars = list.ListValue
 				}
 			default:
-				fmt.Printf("I don't know about type %T for %s!\n", typeVal, command)
+				fmt.Printf("I don't know about type %T in for-vars!\n", typeVal)
 			}
+		} else {
+			Command.ForVars = []string{"1"}
 		}
 
 		block.Commands = append(block.Commands, Command)
@@ -304,25 +314,36 @@ type ExecConfig struct {
 func runCommandsWithConfig(commands []Command, config ExecConfig) {
 	for _, command := range commands {
 
-		/* local copy */
+		/* local copy. I don't know why this is needed
+		   to stop changes made to config outside this
+		   scope.  Isn't Go suppose to pass structs
+		   by value? */
 		execConfig := config
 
 		if len(command.Dir) > 0 {
 			execConfig.Dir = render(command.Dir, VarCfgs)
 		}
 
-		if len(command.Diag) > 0 {
-			execConfig.Cmd = "/usr/bin/echo"
-			execConfig.Args = []string{render(command.Diag, VarCfgs)}
+		for index, value := range command.ForVars {
 
-			execCommand(execConfig)
-		}
+			varCfgs := map[string]VarCfg{}
 
-		if len(command.Exec) > 0 {
-			execConfig.Cmd = "/bin/bash"
-			execConfig.Args = []string{"-c", render(command.Exec, VarCfgs)}
+			maps.Copy(varCfgs, VarCfgs)
+			maps.Copy(varCfgs, map[string]VarCfg{"index": {Value: strconv.Itoa(index)}, "var": {Value: value}})
 
-			execCommand(execConfig)
+			if len(command.Diag) > 0 {
+				execConfig.Cmd = "/usr/bin/echo"
+				execConfig.Args = []string{render(command.Diag, varCfgs)}
+
+				execCommand(execConfig)
+			}
+
+			if len(command.Exec) > 0 {
+				execConfig.Cmd = "/bin/bash"
+				execConfig.Args = []string{"-c", render(command.Exec, varCfgs)}
+
+				execCommand(execConfig)
+			}
 		}
 
 	}
