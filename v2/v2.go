@@ -34,20 +34,21 @@ type ListVarCfg struct {
 }
 
 type Command struct {
-	Exec      string                 `yaml:"exec"`
-	Diag      string                 `yaml:"diag"`
-	Dir       string                 `yaml:"dir"`
-	ForVars   map[string]interface{} `yaml:"for-vars"`
-	Condition string                 `yaml:"condition"`
+	Exec      string   `yaml:"exec"`
+	Diag      string   `yaml:"diag"`
+	Dir       string   `yaml:"dir"`
+	ForVars   []string `yaml:"for-vars"`
+	Condition string   `yaml:"condition"`
 }
 
 type Block struct {
-	Name     string                 `yaml:"name"`
-	Desc     string                 `yaml:"desc"`
-	Commands []Command              `yaml:"commands"`
-	Vars     map[string]interface{} `yaml:"vars"`
-	Dir      string                 `yaml:"dir"`
-	Children []Block                `yaml:"children"`
+	Name        string                   `yaml:"name"`
+	Desc        string                   `yaml:"desc"`
+	CommandsRaw []map[string]interface{} `yaml:"commands"`
+	Commands    []Command                `yaml:"Commands"`
+	Vars        map[string]interface{}   `yaml:"vars"`
+	Dir         string                   `yaml:"dir"`
+	Children    []Block                  `yaml:"children"`
 }
 type DexFile2 struct {
 	Version int                    `yaml:"version"`
@@ -213,7 +214,7 @@ func initVars(varMap map[string]interface{}) {
 var fixupRe = regexp.MustCompile(`\[%\s*(\S+)\s*%\]`)
 var tt = template.New("variable_parser")
 
-func render(tmpl string) string {
+func render(tmpl string, varCfgs map[string]VarCfg) string {
 
 	/*
 	   Converting from the template format established in the perl version
@@ -225,9 +226,42 @@ func render(tmpl string) string {
 
 	var renderBuf bytes.Buffer
 
-	t1.Execute(&renderBuf, VarCfgs)
+	t1.Execute(&renderBuf, varCfgs)
 
 	return renderBuf.String()
+}
+
+func initBlockCommands(block *Block) {
+	for _, command := range block.CommandsRaw {
+
+		/* All this because for-vars can be a string or list */
+		Command := Command{}
+
+		if command["exec"] != nil {
+			Command.Exec = command["exec"].(string)
+		} else if command["diag"] != nil {
+			Command.Diag = command["diag"].(string)
+		} else if command["dir"] != nil {
+			Command.Dir = command["dir"].(string)
+		} else if command["for-vars"] != nil {
+			switch typeVal := command["for-vars"].(type) {
+			case []string:
+				Command.ForVars = typeVal
+			case string:
+
+				if list := VarCfgs[typeVal].ListValue; list != nil {
+					Command.ForVars = list
+				}
+			default:
+				fmt.Printf("I don't know about type %T for %s!\n", typeVal, command)
+			}
+		}
+
+		block.Commands = append(block.Commands, Command)
+
+	}
+
+	block.CommandsRaw = nil
 }
 
 func processBlock(block Block) {
@@ -252,6 +286,7 @@ func processBlock(block Block) {
 
 	}
 
+	initBlockCommands(&block)
 	runCommandsWithConfig(block.Commands, config)
 }
 
@@ -270,19 +305,19 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 		execConfig := config
 
 		if len(command.Dir) > 0 {
-			execConfig.Dir = render(command.Dir)
+			execConfig.Dir = render(command.Dir, VarCfgs)
 		}
 
 		if len(command.Diag) > 0 {
 			execConfig.Cmd = "/usr/bin/echo"
-			execConfig.Args = []string{render(command.Diag)}
+			execConfig.Args = []string{render(command.Diag, VarCfgs)}
 
 			execCommand(execConfig)
 		}
 
 		if len(command.Exec) > 0 {
 			execConfig.Cmd = "/bin/bash"
-			execConfig.Args = []string{"-c", render(command.Exec)}
+			execConfig.Args = []string{"-c", render(command.Exec, VarCfgs)}
 
 			execCommand(execConfig)
 		}

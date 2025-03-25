@@ -90,8 +90,10 @@ blocks:
 				Version: 2,
 				Blocks: []Block{
 					{
-						Name: "hello",
-						Desc: "this is a command description",
+						Name:        "hello",
+						Desc:        "this is a command description",
+						Commands:    nil,
+						CommandsRaw: nil,
 					},
 				},
 			},
@@ -106,10 +108,17 @@ blocks:
     children:
       - name: start
         desc: start the server
+        commands:
+          - exec: systemctl start server
       - name: stop
         desc: stop the server
+        commands:
+          - exec: systemctl stop server
       - name: restart
         desc: restart the server
+        commands:
+          - exec: systemctl stop server
+          - exec: systemctl start server
 `,
 			Dexfile: DexFile2{
 				Version: 2,
@@ -121,14 +130,40 @@ blocks:
 							{
 								Name: "start",
 								Desc: "start the server",
+								//Commands: []Command{
+								//	{
+								//		Exec: "systemctl start server",
+								//	},
+								//},
+								Commands:    nil,
+								CommandsRaw: []map[string]interface{}{{"exec": "systemctl start server"}},
 							},
 							{
 								Name: "stop",
 								Desc: "stop the server",
+								//Commands: []Command{
+								//	{
+								//		Exec: "systemctl stop server",
+								//	},
+								//},
+								Commands:    nil,
+								CommandsRaw: []map[string]interface{}{{"exec": "systemctl stop server"}},
 							},
 							{
 								Name: "restart",
 								Desc: "restart the server",
+								//Commands: []Command{
+								//	{
+								//		Exec: "systemctl stop server",
+								//	},
+								//	{
+								//		Exec: "systemctl start server",
+								//	},
+								//},
+								Commands: nil,
+								CommandsRaw: []map[string]interface{}{
+									{"exec": "systemctl stop server"},
+									{"exec": "systemctl start server"}},
 							},
 						},
 					},
