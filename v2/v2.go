@@ -318,15 +318,15 @@ type ExecConfig struct {
 func runCommandsWithConfig(commands []Command, config ExecConfig) {
 	for _, command := range commands {
 
+		if exit := checkCommandCondition(command.Condition, VarCfgs); exit != 0 {
+			continue
+		}
+
 		/* local copy. I don't know why this is needed
 		   to stop changes made to config outside this
 		   scope.  Isn't Go suppose to pass structs
 		   by value? */
 		execConfig := config
-
-		if exit := checkCommandCondition(command.Condition, VarCfgs); exit != 0 {
-			continue
-		}
 
 		if len(command.Dir) > 0 {
 			execConfig.Dir = render(command.Dir, VarCfgs)

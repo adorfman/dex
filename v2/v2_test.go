@@ -706,11 +706,11 @@ blocks:
     dir:  ".." 
     desc: this is a command description
     commands: 
-       - exec: echo [% index %] [% var %] 
-         for-vars: 
-           - one
-           - two
-           - three
+      - exec: echo [% index %] [% var %] 
+        for-vars: 
+          - one
+          - two
+          - three
 `,
 			Blockpath:  []string{"loop_vars"},
 			CommandOut: "0 one\n1 two\n2 three\n",
@@ -730,11 +730,77 @@ blocks:
     dir:  ".." 
     desc: this is a command description
     commands: 
-       - exec: echo [% some_string %] [% index %] [% var %] 
-         for-vars: some_list 
+      - exec: echo [% some_string %] [% index %] [% var %] 
+        for-vars: some_list 
 `,
 			Blockpath:  []string{"loop_vars"},
 			CommandOut: "foobar 0 four\nfoobar 1 five\nfoobar 2 six\n",
+		},
+	}
+
+	for _, test := range tests {
+
+		block, tDexFile, err := setupTestBlock(t, test)
+
+		defer os.Remove(tDexFile.Name())
+
+		if err := check(t, err, "error setting up test"); err != nil {
+			continue
+		}
+
+		var output bytes.Buffer
+
+		config := ExecConfig{
+			Stdout: &output,
+			Stderr: &output,
+			Dir:    block.Dir,
+		}
+
+		runCommandsWithConfig(block.Commands, config)
+
+		//t.Logf("%s", output.String())
+
+		assert.Equal(t, test.CommandOut, output.String())
+	}
+}
+
+func TestCommandCondition(t *testing.T) {
+
+	tests := []DexTest{
+		{
+			Name: "conditions",
+			Config: `---
+version: 2
+blocks:
+  - name: condition commands 
+    dir:  ".." 
+    desc: this is a command description
+    commands: 
+      - exec: echo condition true 
+        condition: 1 -eq 1 
+      - exec: echo condition false 
+        condition: 1 -eq 0 
+
+`,
+			Blockpath:  []string{"condition commands"},
+			CommandOut: "condition true\n",
+		},
+		{
+			Name: "conditions",
+			Config: `---
+version: 2
+vars:
+  conditionVal: 1
+blocks:
+  - name: condition commands 
+    dir:  ".." 
+    desc: this is a command description
+    commands: 
+      - exec: echo condition true 
+        condition: 1 -eq [% conditionVal %] 
+`,
+			Blockpath:  []string{"condition commands"},
+			CommandOut: "condition true\n",
 		},
 	}
 
