@@ -404,6 +404,32 @@ blocks:
 				},
 			},
 		},
+		{
+			Name: "Vars From command",
+			Config: `---
+version: 2
+vars:
+  command_string:
+    from_command: echo "c var" 
+  command_list:
+    from_command: echo -en "foo\nbar\nbazz" 
+
+blocks:
+  - name: block_vars
+    desc: this is a command description
+`,
+			Blockpath: []string{"block_vars"},
+			ExpectedVars: map[string]VarCfg{
+				"command_string": {
+					FromCommand: "echo \"c var\"",
+					Value:       "c var",
+				},
+				"command_list": {
+					FromCommand: "echo -en \"foo\\nbar\\nbazz\"",
+					ListValue:   []string{"foo", "bar", "bazz"},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {

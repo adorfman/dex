@@ -164,7 +164,7 @@ func initVars(varMap map[string]interface{}) {
 					if len(lines) > 1 {
 						varCfg.ListValue = lines
 					} else {
-						varCfg.Value = lines[1]
+						varCfg.Value = lines[0]
 					}
 				}
 			}
@@ -173,7 +173,7 @@ func initVars(varMap map[string]interface{}) {
 				varCfg.Default = typeVal["default"].(string)
 			}
 
-			if len(varCfg.Value) == 0 && len(varCfg.Default) > 0 {
+			if len(varCfg.Value) == 0 && len(varCfg.ListValue) == 0 && len(varCfg.Default) > 0 {
 				varCfg.Value = varCfg.Default
 			}
 
