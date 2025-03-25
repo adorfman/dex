@@ -698,7 +698,7 @@ func TestForVars(t *testing.T) {
 
 	tests := []DexTest{
 		{
-			Name: "Block dir",
+			Name: "for-vars",
 			Config: `---
 version: 2
 blocks:
@@ -714,6 +714,27 @@ blocks:
 `,
 			Blockpath:  []string{"loop_vars"},
 			CommandOut: "0 one\n1 two\n2 three\n",
+		},
+		{
+			Name: "for-vars list ref",
+			Config: `---
+version: 2
+vars:
+  some_string: foobar
+  some_list:
+    - four
+    - five
+    - six
+blocks:
+  - name: loop_vars 
+    dir:  ".." 
+    desc: this is a command description
+    commands: 
+       - exec: echo [% some_string %] [% index %] [% var %] 
+         for-vars: some_list 
+`,
+			Blockpath:  []string{"loop_vars"},
+			CommandOut: "foobar 0 four\nfoobar 1 five\nfoobar 2 six\n",
 		},
 	}
 

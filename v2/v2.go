@@ -199,7 +199,7 @@ func initVars(varMap map[string]interface{}) {
 		case uint64:
 
 			VarCfgs[varName] = VarCfg{
-				Value: fmt.Sprintf("%d", typeVal),
+				Value: strconv.FormatUint(typeVal, 10),
 			}
 
 		case string:
@@ -324,6 +324,11 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 			execConfig.Dir = render(command.Dir, VarCfgs)
 		}
 
+		/* This behaves slightly different from the perl version
+		       1. Diag wont override Exec and both can run if defined
+			   2. Diag and Exec will both be looped with for-vars
+
+		*/
 		for index, value := range command.ForVars {
 
 			varCfgs := map[string]VarCfg{}
