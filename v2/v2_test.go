@@ -497,11 +497,9 @@ func TestCommandDir(t *testing.T) {
 
 	tests := []DexTest{
 		{
-			Name: "Global Vars",
+			Name: "Block dir",
 			Config: `---
 version: 2
-vars: 
-  string_var: "hi there"
 blocks:
   - name: change_dir 
     dir:  ".." 
@@ -517,6 +515,31 @@ blocks:
 				path, _ := os.Getwd()
 
 				parentDir := filepath.Dir(path) + "\n"
+
+				assert.Equal(t, parentDir, output.String())
+			},
+		},
+		{
+			Name: "Command Dir",
+			Config: `---
+version: 2
+blocks:
+  - name: change_dir 
+    desc: this is a command description
+    commands: 
+       - exec: echo $(pwd)
+         dir:  ".." 
+       - exec: echo $(pwd)
+
+`,
+			Blockpath: []string{"change_dir"},
+			Custom: func(t *testing.T, test DexTest, opts map[string]interface{}) {
+
+				output := opts["ouput"].(bytes.Buffer)
+
+				path, _ := os.Getwd()
+
+				parentDir := filepath.Dir(path) + "\n" + path + "\n"
 
 				assert.Equal(t, parentDir, output.String())
 			},
@@ -581,12 +604,8 @@ blocks:
 
 		runCommandsWithConfig(block.Commands, config)
 
-		//assert.Equal(t, test.CommandOut, output.String())
-
-		t.Logf("%s", output.String())
+		//t.Logf("%s", output.String())
 		test.Custom(t, test, map[string]interface{}{"ouput": output})
-		//t.Logf("string var is %s", VarCfgs["string_var"].Value)
 
-		//assert.True(t, reflect.DeepEqual(test.ExpectedVars, VarCfgs))
 	}
 }

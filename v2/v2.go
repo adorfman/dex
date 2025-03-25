@@ -212,6 +212,8 @@ func processBlock(block Block) {
 }
 
 type ExecConfig struct {
+	Cmd    string
+	Args   []string
 	Stdout io.Writer
 	Stderr io.Writer
 	Dir    string
@@ -226,39 +228,47 @@ type ExecConfig struct {
 func runCommandsWithConfig(commands []Command, config ExecConfig) {
 	for _, command := range commands {
 
+		/* local copy */
+		execConfig := config
+
 		if len(command.Dir) > 0 {
-			config.Dir = render(command.Dir)
+			execConfig.Dir = render(command.Dir)
 		}
 
 		if len(command.Diag) > 0 {
-			execCommand(exec.Command("/usr/bin/echo", render(command.Diag)), config)
+			execConfig.Cmd = "/usr/bin/echo"
+			execConfig.Args = []string{render(command.Diag)}
+
+			execCommand(execConfig)
 		}
 
 		if len(command.Exec) > 0 {
-			execCommand(exec.Command("/bin/bash", "-c", render(command.Exec)), config)
+			execConfig.Cmd = "/bin/bash"
+			execConfig.Args = []string{"-c", render(command.Exec)}
+
+			execCommand(execConfig)
 		}
 
 	}
 }
 
-func execCommand(cmd *exec.Cmd, config ExecConfig) {
+func execCommand(config ExecConfig) int {
 
-	//cmd := exec.Command("/bin/bash", "-c", render(cmd_str))
+	cmd := exec.Command(config.Cmd, config.Args...)
 	cmd.Stdout = config.Stdout
 	cmd.Stderr = config.Stderr
 	cmd.Dir = config.Dir
 
-	fmt.Fprintln(os.Stderr, "dir: ", config.Dir, "-")
-
 	err := cmd.Run()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Failed to run command: ", err)
+
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return exitError.ExitCode()
+		} else {
+			return 1
+		}
+
 	}
 
-	//if err := cmd.Run(); err != nil {
-	//	if exitError, ok := err.(*exec.ExitError); ok {
-	//		return exitError.ExitCode()
-	//	}
-	//}
-
+	return 0
 }
