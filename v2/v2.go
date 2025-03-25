@@ -146,6 +146,29 @@ func initVars(varMap map[string]interface{}) {
 				}
 			}
 
+			if typeVal["from_command"] != nil {
+				varCfg.FromCommand = typeVal["from_command"].(string)
+
+				var output bytes.Buffer
+
+				execConfig := ExecConfig{
+					Stdout: &output,
+				}
+
+				execConfig.Cmd = "/bin/bash"
+				execConfig.Args = []string{"-c", varCfg.FromCommand}
+
+				if exit := execCommand(execConfig); exit == 0 {
+					lines := strings.Split(strings.TrimSuffix(output.String(), "\n"), "\n")
+
+					if len(lines) > 1 {
+						varCfg.ListValue = lines
+					} else {
+						varCfg.Value = lines[1]
+					}
+				}
+			}
+
 			if typeVal["default"] != nil {
 				varCfg.Default = typeVal["default"].(string)
 			}
