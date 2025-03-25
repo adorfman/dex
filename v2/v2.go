@@ -239,11 +239,14 @@ func initBlockCommands(block *Block) {
 
 		if command["exec"] != nil {
 			Command.Exec = command["exec"].(string)
-		} else if command["diag"] != nil {
+		}
+		if command["diag"] != nil {
 			Command.Diag = command["diag"].(string)
-		} else if command["dir"] != nil {
+		}
+		if command["dir"] != nil {
 			Command.Dir = command["dir"].(string)
-		} else if command["for-vars"] != nil {
+		}
+		if command["for-vars"] != nil {
 			switch typeVal := command["for-vars"].(type) {
 			case []string:
 				Command.ForVars = typeVal

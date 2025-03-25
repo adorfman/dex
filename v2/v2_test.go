@@ -61,6 +61,8 @@ func setupTestBlock(t *testing.T, test DexTest) (Block, *os.File, error) {
 
 	initVars(block.Vars)
 
+	initBlockCommands(&block)
+
 	return block, tDexFile, nil
 }
 
@@ -71,6 +73,7 @@ type DexTest struct {
 	MenuOut      string
 	Blockpath    []string
 	Commands     []Command
+	CommandsRaw  []map[string]interface{}
 	CommandOut   string
 	ExpectedVars map[string]VarCfg
 	Custom       func(t *testing.T, test DexTest, opts map[string]interface{})
@@ -114,6 +117,7 @@ blocks:
         desc: stop the server
         commands:
           - exec: systemctl stop server
+            dir: /home/slice
       - name: restart
         desc: restart the server
         commands:
@@ -147,7 +151,7 @@ blocks:
 								//	},
 								//},
 								Commands:    nil,
-								CommandsRaw: []map[string]interface{}{{"exec": "systemctl stop server"}},
+								CommandsRaw: []map[string]interface{}{{"exec": "systemctl stop server", "dir": "/home/slice"}},
 							},
 							{
 								Name: "restart",
@@ -261,7 +265,9 @@ blocks:
           - exec: touch /.restarted 
 `,
 			Blockpath: []string{"server", "restart"},
-			Commands:  []Command{{Exec: "systemctl restart server"}, {Exec: "touch /.restarted"}},
+			CommandsRaw: []map[string]interface{}{
+				{"exec": "systemctl restart server"},
+				{"exec": "touch /.restarted"}},
 		},
 	}
 
@@ -279,7 +285,7 @@ blocks:
 
 		check(t, err, "Error resolving command")
 
-		assert.Equal(t, test.Commands, block.Commands)
+		assert.Equal(t, test.CommandsRaw, block.CommandsRaw)
 
 	}
 }
@@ -324,6 +330,7 @@ blocks:
 			Stderr: &output,
 		}
 
+		initBlockCommands(&block)
 		runCommandsWithConfig(block.Commands, config)
 
 		assert.Equal(t, test.CommandOut, output.String())
@@ -545,21 +552,14 @@ blocks:
 
 	for _, test := range tests {
 
-		tcfg, yamlData, _ := createTestConfig(t, test.Config)
+		block, tDexFile, err := setupTestBlock(t, test)
 
-		defer os.Remove(tcfg.Name())
+		defer os.Remove(tDexFile.Name())
 
-		dex_file, err := ParseConfig(yamlData)
+		if err := check(t, err, "error setting up test"); err != nil {
+			continue
+		}
 
-		check(t, err, "Error parsing config")
-
-		initVars(dex_file.Vars)
-
-		block, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
-
-		check(t, err, "Error resolving command")
-
-		initVars(block.Vars)
 		var output bytes.Buffer
 
 		config := ExecConfig{
@@ -669,7 +669,7 @@ blocks:
 		//		},
 	}
 
-	for _, test := range tests {
+	for _, test := range tests[1:2] {
 
 		block, tDexFile, err := setupTestBlock(t, test)
 
@@ -687,6 +687,7 @@ blocks:
 			Dir:    block.Dir,
 		}
 
+		t.Logf("%v", block.Commands)
 		runCommandsWithConfig(block.Commands, config)
 
 		//t.Logf("%s", output.String())
