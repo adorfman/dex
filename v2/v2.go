@@ -248,6 +248,10 @@ func initBlockCommands(block *Block) {
 		if command["dir"] != nil {
 			Command.Dir = command["dir"].(string)
 		}
+		if command["condition"] != nil {
+			Command.Condition = command["condition"].(string)
+		}
+
 		if command["for-vars"] != nil {
 			switch typeVal := command["for-vars"].(type) {
 			case []interface{}:
@@ -280,6 +284,7 @@ func initBlockCommands(block *Block) {
 func processBlock(block Block) {
 
 	initVars(block.Vars)
+	initBlockCommands(&block)
 
 	config := ExecConfig{
 		Stdout: os.Stdout,
@@ -299,7 +304,6 @@ func processBlock(block Block) {
 
 	}
 
-	initBlockCommands(&block)
 	runCommandsWithConfig(block.Commands, config)
 }
 
@@ -319,6 +323,10 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 		   scope.  Isn't Go suppose to pass structs
 		   by value? */
 		execConfig := config
+
+		if exit := checkCommandCondition(command.Condition, VarCfgs); exit != 0 {
+			continue
+		}
 
 		if len(command.Dir) > 0 {
 			execConfig.Dir = render(command.Dir, VarCfgs)
@@ -373,4 +381,21 @@ func execCommand(config ExecConfig) int {
 	}
 
 	return 0
+}
+
+func checkCommandCondition(condition string, varCfgs map[string]VarCfg) int {
+
+	if len(condition) == 0 {
+		return 0
+	}
+
+	config := ExecConfig{
+		Stdout: os.NewFile(0, os.DevNull),
+		Stderr: os.NewFile(0, os.DevNull),
+	}
+
+	config.Cmd = "/bin/bash"
+	config.Args = []string{"-c", fmt.Sprintf("test %s", render(condition, varCfgs))}
+
+	return execCommand(config)
 }
