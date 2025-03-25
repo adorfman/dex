@@ -135,6 +135,27 @@ func initVars(varMap map[string]interface{}) {
 	for varName, value := range varMap {
 
 		switch typeVal := value.(type) {
+		case map[string]interface{}:
+
+			varCfg := VarCfg{}
+
+			if typeVal["from_env"] != nil {
+				varCfg.FromEnv = typeVal["from_env"].(string)
+				if envVal := os.Getenv(varCfg.FromEnv); len(envVal) > 0 {
+					varCfg.Value = envVal
+				}
+			}
+
+			if typeVal["default"] != nil {
+				varCfg.Default = typeVal["default"].(string)
+			}
+
+			if len(varCfg.Value) == 0 && len(varCfg.Default) > 0 {
+				varCfg.Value = varCfg.Default
+			}
+
+			VarCfgs[varName] = varCfg
+
 		case []interface{}:
 
 			VarCfgs[varName] = VarCfg{
@@ -218,12 +239,6 @@ type ExecConfig struct {
 	Stderr io.Writer
 	Dir    string
 }
-
-//func runCommands(commands []Command) {
-//
-//
-//	runCommandsWithConfig(commands, config)
-//}
 
 func runCommandsWithConfig(commands []Command, config ExecConfig) {
 	for _, command := range commands {

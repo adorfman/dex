@@ -48,6 +48,9 @@ func setupTestBlock(t *testing.T, test DexTest) (Block, *os.File, error) {
 		return Block{}, nil, err
 	}
 
+	/* reset VarCfgs */
+	VarCfgs = map[string]VarCfg{}
+
 	initVars(dexFile.Vars)
 
 	block, err := resolveCmdToCodeblock(dexFile.Blocks, test.Blockpath)
@@ -373,29 +376,50 @@ blocks:
 				},
 			},
 		},
+		{
+			Name: "Vars From Env",
+			Config: `---
+version: 2
+vars:
+  global_string:
+    from_env: TESTENV 
+  not_set:
+    from_env: TESTENV_UNSET 
+    default: fizzbizz 
+
+blocks:
+  - name: block_vars
+    desc: this is a command description
+`,
+			Blockpath: []string{"block_vars"},
+			ExpectedVars: map[string]VarCfg{
+				"global_string": {
+					FromEnv: "TESTENV",
+					Value:   "from env!",
+				},
+				"not_set": {
+					FromEnv: "TESTENV_UNSET",
+					Default: "fizzbizz",
+					Value:   "fizzbizz",
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
 
-		tcfg, yamlData, _ := createTestConfig(t, test.Config)
+		os.Setenv("TESTENV", "from env!")
 
-		defer os.Remove(tcfg.Name())
+		_, tDexFile, err := setupTestBlock(t, test)
 
-		dex_file, err := ParseConfig(yamlData)
+		defer os.Remove(tDexFile.Name())
 
-		check(t, err, "Error parsing config")
+		if err := check(t, err, "error setting up test"); err != nil {
+			continue
+		}
 
-		initVars(dex_file.Vars)
-
-		block, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
-
-		check(t, err, "Error resolving command")
-
-		initVars(block.Vars)
-
-		//t.Logf("%s", VarCfgs)
-		//t.Logf("string var is %s", VarCfgs["string_var"].Value)
-
+		//t.Logf("%v", VarCfgs)
+		//t.Logf("%v", test.ExpectedVars)
 		assert.True(t, reflect.DeepEqual(test.ExpectedVars, VarCfgs))
 	}
 }
