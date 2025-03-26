@@ -44,4 +44,14 @@ func TestFindConfigFile(t *testing.T) {
 
 	assert.Equal(t, cfg2, f2.Name())
 
+	f3, err := os.CreateTemp("", "dex-test")
+	check(t, err, "Error creating second cfg file")
+
+	os.Setenv("DEX_FILE", f3.Name())
+
+	cfg3, err := findConfigFile()
+	check(t, err, "config file not found")
+
+	assert.Equal(t, cfg3, f3.Name())
+
 }

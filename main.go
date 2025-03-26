@@ -6,6 +6,7 @@ import (
 	"os"
 
 	v1 "dex/v1"
+	v2 "dex/v2"
 )
 
 // Paths to search for dex files.
@@ -33,6 +34,8 @@ func main() {
 
 	if dexFile, err := v1.ParseConfig(dexData); err == nil {
 		v1.Run(dexFile, os.Args)
+	} else if dexFile, err := v2.ParseConfig(dexData); err == nil {
+		v2.Run(dexFile, os.Args)
 	} else if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -63,6 +66,13 @@ Search through the config_files array and return the first
 	dex file that exists.
 */
 func findConfigFile() (string, error) {
+
+	/* DEX_FILE env takes priority */
+	if dexFileEnv := os.Getenv("DEX_FILE"); len(dexFileEnv) > 0 {
+		if _, err := os.Stat(dexFileEnv); err == nil {
+			return dexFileEnv, nil
+		}
+	}
 
 	for _, filename := range configFileLocations {
 		if _, err := os.Stat(filename); err == nil {

@@ -132,38 +132,20 @@ blocks:
 						Desc: "this is a command description",
 						Children: []Block{
 							{
-								Name: "start",
-								Desc: "start the server",
-								//Commands: []Command{
-								//	{
-								//		Exec: "systemctl start server",
-								//	},
-								//},
+								Name:        "start",
+								Desc:        "start the server",
 								Commands:    nil,
 								CommandsRaw: []map[string]interface{}{{"exec": "systemctl start server"}},
 							},
 							{
-								Name: "stop",
-								Desc: "stop the server",
-								//Commands: []Command{
-								//	{
-								//		Exec: "systemctl stop server",
-								//	},
-								//},
+								Name:        "stop",
+								Desc:        "stop the server",
 								Commands:    nil,
 								CommandsRaw: []map[string]interface{}{{"exec": "systemctl stop server", "dir": "/home/slice"}},
 							},
 							{
-								Name: "restart",
-								Desc: "restart the server",
-								//Commands: []Command{
-								//	{
-								//		Exec: "systemctl stop server",
-								//	},
-								//	{
-								//		Exec: "systemctl start server",
-								//	},
-								//},
+								Name:     "restart",
+								Desc:     "restart the server",
 								Commands: nil,
 								CommandsRaw: []map[string]interface{}{
 									{"exec": "systemctl stop server"},
@@ -305,23 +287,18 @@ blocks:
 `,
 			Blockpath:  []string{"hello_world"},
 			CommandOut: "hello world\n",
-			//Commands:  []Command{{Exec: "systemctl restart server"}, {Exec: "touch /.restarted"}},
 		},
 	}
 
 	for _, test := range tests {
 
-		tcfg, yamlData, _ := createTestConfig(t, test.Config)
+		block, tDexFile, err := setupTestBlock(t, test)
 
-		defer os.Remove(tcfg.Name())
+		defer os.Remove(tDexFile.Name())
 
-		dex_file, err := ParseConfig(yamlData)
-
-		check(t, err, "Error parsing config")
-
-		block, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
-
-		check(t, err, "Error resolving command")
+		if err := check(t, err, "error setting up test"); err != nil {
+			continue
+		}
 
 		var output bytes.Buffer
 
@@ -330,7 +307,6 @@ blocks:
 			Stderr: &output,
 		}
 
-		initBlockCommands(&block)
 		runCommandsWithConfig(block.Commands, config)
 
 		assert.Equal(t, test.CommandOut, output.String())
@@ -487,7 +463,6 @@ blocks:
 		}
 
 		//t.Logf("%v", VarCfgs)
-		//t.Logf("%v", test.ExpectedVars)
 		assert.True(t, reflect.DeepEqual(test.ExpectedVars, VarCfgs))
 	}
 }
@@ -570,11 +545,6 @@ blocks:
 		runCommandsWithConfig(block.Commands, config)
 
 		assert.Equal(t, test.CommandOut, output.String())
-
-		//t.Logf("%s", VarCfgs)
-		//t.Logf("string var is %s", VarCfgs["string_var"].Value)
-
-		//assert.True(t, reflect.DeepEqual(test.ExpectedVars, VarCfgs))
 	}
 }
 
@@ -629,44 +599,6 @@ blocks:
 				assert.Equal(t, parentDir, output.String())
 			},
 		},
-		//		{
-		//			Name: "Block Vars",
-		//			Config: `---
-		//version: 2
-		//vars:
-		//  global_string: "foobar"
-		//
-		//blocks:
-		//  - name: block_vars
-		//    desc: this is a command description
-		//    vars:
-		//      string_var: "from block"
-		//      int_var: 3
-		//    commands:
-		//       - exec: echo "[% global_string %] [% string_var %] [% int_var %]"
-		//`,
-		//			Blockpath:  []string{"block_vars"},
-		//			CommandOut: "foobar from block 3\n",
-		//		},
-		//		{
-		//			Name: "Diag",
-		//			Config: `---
-		//version: 2
-		//vars:
-		//  global_string: "foobar"
-		//
-		//blocks:
-		//  - name: diag_command
-		//    desc: this is a command description
-		//    vars:
-		//      string_var: "from block"
-		//      int_var: 4
-		//    commands:
-		//       - diag: "[% global_string %] [% string_var %] [% int_var %]"
-		//`,
-		//			Blockpath:  []string{"diag_command"},
-		//			CommandOut: "foobar from block 4\n",
-		//		},
 	}
 
 	for _, test := range tests {
@@ -689,7 +621,6 @@ blocks:
 
 		runCommandsWithConfig(block.Commands, config)
 
-		//t.Logf("%s", output.String())
 		test.Custom(t, test, map[string]interface{}{"ouput": output})
 	}
 }
@@ -758,8 +689,6 @@ blocks:
 
 		runCommandsWithConfig(block.Commands, config)
 
-		//t.Logf("%s", output.String())
-
 		assert.Equal(t, test.CommandOut, output.String())
 	}
 }
@@ -823,8 +752,6 @@ blocks:
 		}
 
 		runCommandsWithConfig(block.Commands, config)
-
-		//t.Logf("%s", output.String())
 
 		assert.Equal(t, test.CommandOut, output.String())
 	}

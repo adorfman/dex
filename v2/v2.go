@@ -7,13 +7,11 @@ import (
 	"io"
 	"maps"
 	"os"
-	"regexp"
-	"text/template"
-
-	//    "reflect"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/goccy/go-yaml"
 )
@@ -81,10 +79,10 @@ func Run(dexFile DexFile2, args []string) {
 		os.Exit(1)
 	}
 
-	initVars(dexFile.Vars)
+	/* Found block.  Init top level variables and process the
+	   block and its commands */
 
-	//
-	// /* Found commands: run them */
+	initVars(dexFile.Vars)
 	processBlock(block)
 }
 
