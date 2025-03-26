@@ -18,19 +18,42 @@ import (
 
 var VarCfgs = map[string]VarCfg{}
 
+type VarValue interface {
+	string | []string
+}
+
 type VarCfg struct {
-	Value       string
+	StringValue string
 	ListValue   []string
 	FromCommand string `yaml:"from_command"`
 	FromEnv     string `yaml:"from_env"`
 	Default     string `yaml:"default"`
 }
 
-type ListVarCfg struct {
-	Value       []string
-	FromCommand string   `yaml:"from_command"`
-	FromEnv     string   `yaml:"from_env"`
-	Default     []string `yaml:"default"`
+func (varCfg VarCfg) Value() (any, error) {
+
+	if len(varCfg.StringValue) > 0 {
+		return varCfg.Value, nil
+	} else if len(varCfg.ListValue) > 0 {
+		return varCfg.ListValue, nil
+	}
+
+	return nil, errors.New("undefined")
+
+}
+
+func SetVar[Value VarValue](varCfg *VarCfg, value Value) error {
+	switch typeValue := any(value).(type) {
+	case []string:
+		varCfg.ListValue = typeValue
+
+	case string:
+		varCfg.StringValue = typeValue
+	default:
+		return errors.New("unknown VarCfg value typ")
+	}
+
+	return nil
 }
 
 type Command struct {
@@ -51,9 +74,11 @@ type Block struct {
 	Children    []Block                  `yaml:"children"`
 }
 type DexFile2 struct {
-	Version int                    `yaml:"version"`
-	Vars    map[string]interface{} `yaml:"vars"`
-	Blocks  []Block                `yaml:"blocks"`
+	Version   int                    `yaml:"version"`
+	Vars      map[string]interface{} `yaml:"vars"`
+	Blocks    []Block                `yaml:"blocks"`
+	Shell     string                 `yaml:"shell"`
+	ShellArgs []string               `yaml:"shell_args"`
 }
 
 /*
@@ -86,9 +111,16 @@ func Run(dexFile DexFile2, args []string) {
 	processBlock(block)
 }
 
+func checkSetDefault[D string | []string](field *D, def D) {
+
+	if len(*field) == 0 {
+		*field = def
+	}
+}
+
 /*
 Attempt to parse the YAML content into DexFile2 format
-and do some sanity checks
+and do some sanity checks and set defaults.
 */
 func ParseConfig(configData []byte) (DexFile2, error) {
 
@@ -99,6 +131,9 @@ func ParseConfig(configData []byte) (DexFile2, error) {
 	} else if dexFile.Version != 2 {
 		return DexFile2{}, errors.New("incorrect version number")
 	}
+
+	checkSetDefault(&dexFile.Shell, "/bin/bash")
+	checkSetDefault(&dexFile.ShellArgs, []string{"-c"})
 
 	return dexFile, nil
 }
@@ -145,7 +180,7 @@ func initVars(varMap map[string]interface{}) {
 			if typeVal["from_env"] != nil {
 				varCfg.FromEnv = typeVal["from_env"].(string)
 				if envVal := os.Getenv(varCfg.FromEnv); len(envVal) > 0 {
-					varCfg.Value = envVal
+					varCfg.StringValue = envVal
 				}
 			}
 
@@ -166,9 +201,12 @@ func initVars(varMap map[string]interface{}) {
 
 					/* Turn multi-line output into List */
 					if len(lines) > 1 {
-						varCfg.ListValue = lines
+
+						SetVar(&varCfg, lines)
+						//varCfg.ListValue = lines
 					} else {
-						varCfg.Value = lines[0]
+						SetVar(&varCfg, lines[0])
+						//varCfg.StringValue = lines[0]
 					}
 				}
 			}
@@ -177,8 +215,11 @@ func initVars(varMap map[string]interface{}) {
 				varCfg.Default = typeVal["default"].(string)
 			}
 
-			if len(varCfg.Value) == 0 && len(varCfg.ListValue) == 0 && len(varCfg.Default) > 0 {
-				varCfg.Value = varCfg.Default
+			//if len(varCfg.StringValue) == 0 && len(varCfg.ListValue) == 0 && len(varCfg.Default) > 0 {
+			if _, err := varCfg.Value(); err != nil && len(varCfg.Default) > 0 {
+
+				SetVar(&varCfg, varCfg.Default)
+				//varCfg.StringValue = varCfg.Default
 			}
 
 			VarCfgs[varName] = varCfg
@@ -193,7 +234,9 @@ func initVars(varMap map[string]interface{}) {
 			for _, elem := range typeVal {
 
 				entry := VarCfgs[varName]
-				entry.ListValue = append(entry.ListValue, elem.(string))
+				SetVar(&entry, append(entry.ListValue, elem.(string)))
+
+				//entry.ListValue = append(entry.ListValue, elem.(string))
 
 				VarCfgs[varName] = entry
 			}
@@ -202,14 +245,14 @@ func initVars(varMap map[string]interface{}) {
 		case uint64:
 
 			VarCfgs[varName] = VarCfg{
-				Value: strconv.FormatUint(typeVal, 10),
+				StringValue: strconv.FormatUint(typeVal, 10),
 			}
 
 		/* String */
 		case string:
 
 			VarCfgs[varName] = VarCfg{
-				Value: typeVal,
+				StringValue: typeVal,
 			}
 		default:
 			fmt.Printf("I don't know about type %T for %s!\n", typeVal, varName)
@@ -225,7 +268,7 @@ func render(tmpl string, varCfgs map[string]VarCfg) string {
 	/*
 	   Converting from the template format established in the perl version
 	*/
-	t1, err := tt.Parse(fixupRe.ReplaceAllString(tmpl, "{{ .$1.Value }}"))
+	t1, err := tt.Parse(fixupRe.ReplaceAllString(tmpl, "{{ .$1.StringValue }}"))
 	if err != nil {
 		panic(err)
 	}
@@ -344,7 +387,7 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 			varCfgs := map[string]VarCfg{}
 
 			maps.Copy(varCfgs, VarCfgs)
-			maps.Copy(varCfgs, map[string]VarCfg{"index": {Value: strconv.Itoa(index)}, "var": {Value: value}})
+			maps.Copy(varCfgs, map[string]VarCfg{"index": {StringValue: strconv.Itoa(index)}, "var": {StringValue: value}})
 
 			if len(command.Diag) > 0 {
 				execConfig.Cmd = "/usr/bin/echo"

@@ -90,7 +90,9 @@ blocks:
   - name: hello
     desc: this is a command description`,
 			Dexfile: DexFile2{
-				Version: 2,
+				Version:   2,
+				Shell:     "/bin/bash",
+				ShellArgs: []string{"-c"},
 				Blocks: []Block{
 					{
 						Name:        "hello",
@@ -105,6 +107,7 @@ blocks:
 			Name: "Hello Children",
 			Config: `---
 version: 2
+shell: /bin/zsh
 blocks:
   - name: hello
     desc: this is a command description
@@ -125,7 +128,9 @@ blocks:
           - exec: systemctl start server
 `,
 			Dexfile: DexFile2{
-				Version: 2,
+				Version:   2,
+				Shell:     "/bin/zsh",
+				ShellArgs: []string{"-c"},
 				Blocks: []Block{
 					{
 						Name: "hello",
@@ -337,10 +342,10 @@ blocks:
 			CommandOut: "hello world\n",
 			ExpectedVars: map[string]VarCfg{
 				"string_var": {
-					Value: "hi there",
+					StringValue: "hi there",
 				},
 				"int_var": {
-					Value: "2",
+					StringValue: "2",
 				},
 				"list_var": {
 					ListValue: []string{
@@ -378,13 +383,13 @@ blocks:
 			CommandOut: "hello world\n",
 			ExpectedVars: map[string]VarCfg{
 				"global_string": {
-					Value: "foobar",
+					StringValue: "foobar",
 				},
 				"string_var": {
-					Value: "from block",
+					StringValue: "from block",
 				},
 				"int_var": {
-					Value: "3",
+					StringValue: "3",
 				},
 				"list_var": {
 					ListValue: []string{
@@ -412,13 +417,13 @@ blocks:
 			Blockpath: []string{"block_vars"},
 			ExpectedVars: map[string]VarCfg{
 				"global_string": {
-					FromEnv: "TESTENV",
-					Value:   "from env!",
+					FromEnv:     "TESTENV",
+					StringValue: "from env!",
 				},
 				"not_set": {
-					FromEnv: "TESTENV_UNSET",
-					Default: "fizzbizz",
-					Value:   "fizzbizz",
+					FromEnv:     "TESTENV_UNSET",
+					Default:     "fizzbizz",
+					StringValue: "fizzbizz",
 				},
 			},
 		},
@@ -440,7 +445,7 @@ blocks:
 			ExpectedVars: map[string]VarCfg{
 				"command_string": {
 					FromCommand: "echo \"c var\"",
-					Value:       "c var",
+					StringValue: "c var",
 				},
 				"command_list": {
 					FromCommand: "echo -en \"foo\\nbar\\nbazz\"",
@@ -543,6 +548,7 @@ blocks:
 		}
 
 		runCommandsWithConfig(block.Commands, config)
+		t.Logf("out %s", output.String())
 
 		assert.Equal(t, test.CommandOut, output.String())
 	}
