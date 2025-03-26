@@ -87,7 +87,8 @@ func Run(dexFile DexFile2, args []string) {
 }
 
 /*
-Attempt to parse the YAML content into DexFile format
+Attempt to parse the YAML content into DexFile2 format
+and do some sanity checks
 */
 func ParseConfig(configData []byte) (DexFile2, error) {
 
@@ -136,6 +137,7 @@ func initVars(varMap map[string]interface{}) {
 	for varName, value := range varMap {
 
 		switch typeVal := value.(type) {
+		/* VarCfg */
 		case map[string]interface{}:
 
 			varCfg := VarCfg{}
@@ -162,6 +164,7 @@ func initVars(varMap map[string]interface{}) {
 				if exit := execCommand(execConfig); exit == 0 {
 					lines := strings.Split(strings.TrimSuffix(output.String(), "\n"), "\n")
 
+					/* Turn multi-line output into List */
 					if len(lines) > 1 {
 						varCfg.ListValue = lines
 					} else {
@@ -180,6 +183,7 @@ func initVars(varMap map[string]interface{}) {
 
 			VarCfgs[varName] = varCfg
 
+		/* List */
 		case []interface{}:
 
 			VarCfgs[varName] = VarCfg{
@@ -194,12 +198,14 @@ func initVars(varMap map[string]interface{}) {
 				VarCfgs[varName] = entry
 			}
 
+		/* Integer */
 		case uint64:
 
 			VarCfgs[varName] = VarCfg{
 				Value: strconv.FormatUint(typeVal, 10),
 			}
 
+		/* String */
 		case string:
 
 			VarCfgs[varName] = VarCfg{
@@ -231,24 +237,22 @@ func render(tmpl string, varCfgs map[string]VarCfg) string {
 	return renderBuf.String()
 }
 
+func assignIfSet(commandCfg map[string]interface{}, key string, field *string) {
+	if commandCfg[key] != nil {
+		*field = commandCfg[key].(string)
+	}
+}
+
 func initBlockCommands(block *Block) {
 	for _, command := range block.CommandsRaw {
 
 		/* All this because for-vars can be a string referncing a list or list */
 		Command := Command{}
 
-		if command["exec"] != nil {
-			Command.Exec = command["exec"].(string)
-		}
-		if command["diag"] != nil {
-			Command.Diag = command["diag"].(string)
-		}
-		if command["dir"] != nil {
-			Command.Dir = command["dir"].(string)
-		}
-		if command["condition"] != nil {
-			Command.Condition = command["condition"].(string)
-		}
+		assignIfSet(command, "exec", &Command.Exec)
+		assignIfSet(command, "diag", &Command.Diag)
+		assignIfSet(command, "dir", &Command.Dir)
+		assignIfSet(command, "condition", &Command.Condition)
 
 		if command["for-vars"] != nil {
 			switch typeVal := command["for-vars"].(type) {
