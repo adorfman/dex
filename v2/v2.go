@@ -33,7 +33,6 @@ func (varCfg VarCfg) Value() (any, error) {
 	}
 
 	return nil, errors.New("undefined")
-
 }
 
 type VarValue interface {
@@ -149,7 +148,6 @@ func initBlockFromPath(dexFile DexFile2, blockPath []string) (Block, error) {
 
 	/* Found block.  Init variables, set defaults and process the
 	   block and its commands */
-
 	checkSetDefault(&block.Shell, dexFile.Shell)
 	checkSetDefault(&block.ShellArgs, dexFile.ShellArgs)
 	initVars(block.Vars)
@@ -180,9 +178,8 @@ func ParseConfig(configData []byte) (DexFile2, error) {
 
 /*
 Display the menu by recursively processing each element of the DexFile and
-
-	showing the name and description for the command.  Children are indented with
-	4 spaces.
+showing the name and description for the command.  Children are indented with
+4 spaces.
 */
 func displayMenu(w io.Writer, blocks []Block, indent int) {
 	for _, elem := range blocks {
@@ -244,10 +241,8 @@ func initVars(varMap map[string]interface{}) {
 					if len(lines) > 1 {
 
 						SetVarValue(&varCfg, lines)
-						//varCfg.ListValue = lines
 					} else {
 						SetVarValue(&varCfg, lines[0])
-						//varCfg.StringValue = lines[0]
 					}
 				}
 			}
@@ -349,9 +344,7 @@ func initBlockCommands(block *Block) {
 			case []interface{}:
 
 				for _, elem := range typeVal {
-
 					Command.ForVars = append(Command.ForVars, elem.(string))
-
 				}
 
 			/* name of list */
@@ -368,7 +361,6 @@ func initBlockCommands(block *Block) {
 		}
 
 		block.Commands = append(block.Commands, Command)
-
 	}
 
 	block.CommandsRaw = nil
@@ -412,8 +404,8 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 		checkSetOverride(&execConfig.Dir, render(command.Dir, VarCfgs))
 
 		/* This behaves slightly different from the perl version
-		       1. Diag wont override Exec and both can run if defined
-			   2. Diag and Exec will both be looped with for-vars
+		   1. Diag wont override Exec and both can run if defined
+		   2. Diag and Exec will both be looped with for-vars
 
 		*/
 		for index, value := range command.ForVars {
