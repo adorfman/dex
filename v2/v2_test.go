@@ -53,15 +53,11 @@ func setupTestBlock(t *testing.T, test DexTest) (Block, *os.File, error) {
 
 	initVars(dexFile.Vars)
 
-	block, err := resolveCmdToCodeblock(dexFile.Blocks, test.Blockpath)
+	block, err := initBlockFromPath(dexFile, test.Blockpath)
 
 	if err := check(t, err, "Error resolving command"); err != nil {
 		return Block{}, nil, err
 	}
-
-	initVars(block.Vars)
-
-	initBlockCommands(&block)
 
 	return block, tDexFile, nil
 }
@@ -312,7 +308,7 @@ blocks:
 			Stderr: &output,
 		}
 
-		runCommandsWithConfig(block.Commands, config)
+		processBlock(block, config)
 
 		assert.Equal(t, test.CommandOut, output.String())
 
@@ -467,7 +463,6 @@ blocks:
 			continue
 		}
 
-		//t.Logf("%v", VarCfgs)
 		assert.True(t, reflect.DeepEqual(test.ExpectedVars, VarCfgs))
 	}
 }
@@ -547,8 +542,7 @@ blocks:
 			Stderr: &output,
 		}
 
-		runCommandsWithConfig(block.Commands, config)
-		t.Logf("out %s", output.String())
+		processBlock(block, config)
 
 		assert.Equal(t, test.CommandOut, output.String())
 	}
@@ -622,10 +616,9 @@ blocks:
 		config := ExecConfig{
 			Stdout: &output,
 			Stderr: &output,
-			Dir:    block.Dir,
 		}
 
-		runCommandsWithConfig(block.Commands, config)
+		processBlock(block, config)
 
 		test.Custom(t, test, map[string]interface{}{"ouput": output})
 	}
@@ -693,7 +686,7 @@ blocks:
 			Dir:    block.Dir,
 		}
 
-		runCommandsWithConfig(block.Commands, config)
+		processBlock(block, config)
 
 		assert.Equal(t, test.CommandOut, output.String())
 	}
@@ -754,10 +747,9 @@ blocks:
 		config := ExecConfig{
 			Stdout: &output,
 			Stderr: &output,
-			Dir:    block.Dir,
 		}
 
-		runCommandsWithConfig(block.Commands, config)
+		processBlock(block, config)
 
 		assert.Equal(t, test.CommandOut, output.String())
 	}

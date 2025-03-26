@@ -36,7 +36,7 @@ func main() {
 		v1.Run(dexFile, os.Args)
 	} else if dexFile, err := v2.ParseConfig(dexData); err == nil {
 		v2.Run(dexFile, os.Args)
-	} else if err != nil {
+	} else {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

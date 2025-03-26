@@ -16,12 +16,6 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-var VarCfgs = map[string]VarCfg{}
-
-type VarValue interface {
-	string | []string
-}
-
 type VarCfg struct {
 	StringValue string
 	ListValue   []string
@@ -42,7 +36,11 @@ func (varCfg VarCfg) Value() (any, error) {
 
 }
 
-func SetVar[Value VarValue](varCfg *VarCfg, value Value) error {
+type VarValue interface {
+	string | []string
+}
+
+func SetVarValue[Value VarValue](varCfg *VarCfg, value Value) error {
 	switch typeValue := any(value).(type) {
 	case []string:
 		varCfg.ListValue = typeValue
@@ -61,6 +59,8 @@ type Command struct {
 	Diag      string   `yaml:"diag"`
 	Dir       string   `yaml:"dir"`
 	ForVars   []string `yaml:"for-vars"`
+	Shell     string   `yaml:"shell"`
+	ShellArgs []string `yaml:"shell_args"`
 	Condition string   `yaml:"condition"`
 }
 
@@ -71,6 +71,8 @@ type Block struct {
 	Commands    []Command                `yaml:"Commands"`
 	Vars        map[string]interface{}   `yaml:"vars"`
 	Dir         string                   `yaml:"dir"`
+	Shell       string                   `yaml:"shell"`
+	ShellArgs   []string                 `yaml:"shell_args"`
 	Children    []Block                  `yaml:"children"`
 }
 type DexFile2 struct {
@@ -79,6 +81,26 @@ type DexFile2 struct {
 	Blocks    []Block                `yaml:"blocks"`
 	Shell     string                 `yaml:"shell"`
 	ShellArgs []string               `yaml:"shell_args"`
+}
+
+var DefaultShell = "/bin/bash"
+var DefaultShellArgs = []string{"-c"}
+var VarCfgs = map[string]VarCfg{}
+
+/* Helper function to set default value if field value is unset */
+func checkSetDefault[D string | []string](field *D, def D) {
+
+	if len(*field) == 0 {
+		*field = def
+	}
+}
+
+/* Helper function to set field value if override value is set */
+func checkSetOverride[D string | []string](field *D, override D) {
+
+	if len(override) != 0 {
+		*field = override
+	}
 }
 
 /*
@@ -94,28 +116,46 @@ func Run(dexFile DexFile2, args []string) {
 		os.Exit(0)
 	}
 
-	block, err := resolveCmdToCodeblock(dexFile.Blocks, args[1:])
-	//
-	// /* No commands were found from the arguments the user passed: show error, menu and exit */
-	//
+	initVars(dexFile.Vars)
+
+	block, err := initBlockFromPath(dexFile, args[1:])
+
+	/* No commands were found from the arguments the user passed: show error, menu and exit */
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: No commands were found at %v\n\nSee the menu:\n", args[1:])
+		fmt.Fprint(os.Stderr, err.Error())
 		displayMenu(os.Stderr, dexFile.Blocks, 0)
 		os.Exit(1)
 	}
 
+	config := ExecConfig{
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+
 	/* Found block.  Init top level variables and process the
 	   block and its commands */
-
-	initVars(dexFile.Vars)
-	processBlock(block)
+	processBlock(block, config)
 }
 
-func checkSetDefault[D string | []string](field *D, def D) {
+func initBlockFromPath(dexFile DexFile2, blockPath []string) (Block, error) {
 
-	if len(*field) == 0 {
-		*field = def
+	block, err := resolveCmdToCodeblock(dexFile.Blocks, blockPath)
+
+	/* No commands were found from the arguments the user passed:
+	   show error, menu and exit */
+	if err != nil {
+		return Block{}, fmt.Errorf("error: No commands were found at %v\n\nSee the menu", blockPath[1:])
 	}
+
+	/* Found block.  Init variables, set defaults and process the
+	   block and its commands */
+
+	checkSetDefault(&block.Shell, dexFile.Shell)
+	checkSetDefault(&block.ShellArgs, dexFile.ShellArgs)
+	initVars(block.Vars)
+	initBlockCommands(&block)
+
+	return block, nil
 }
 
 /*
@@ -132,8 +172,8 @@ func ParseConfig(configData []byte) (DexFile2, error) {
 		return DexFile2{}, errors.New("incorrect version number")
 	}
 
-	checkSetDefault(&dexFile.Shell, "/bin/bash")
-	checkSetDefault(&dexFile.ShellArgs, []string{"-c"})
+	checkSetDefault(&dexFile.Shell, DefaultShell)
+	checkSetDefault(&dexFile.ShellArgs, DefaultShellArgs)
 
 	return dexFile, nil
 }
@@ -156,6 +196,7 @@ func displayMenu(w io.Writer, blocks []Block, indent int) {
 }
 
 func resolveCmdToCodeblock(blocks []Block, cmds []string) (Block, error) {
+
 	for _, elem := range blocks {
 		if elem.Name == cmds[0] {
 			if len(cmds) >= 2 {
@@ -202,10 +243,10 @@ func initVars(varMap map[string]interface{}) {
 					/* Turn multi-line output into List */
 					if len(lines) > 1 {
 
-						SetVar(&varCfg, lines)
+						SetVarValue(&varCfg, lines)
 						//varCfg.ListValue = lines
 					} else {
-						SetVar(&varCfg, lines[0])
+						SetVarValue(&varCfg, lines[0])
 						//varCfg.StringValue = lines[0]
 					}
 				}
@@ -215,11 +256,9 @@ func initVars(varMap map[string]interface{}) {
 				varCfg.Default = typeVal["default"].(string)
 			}
 
-			//if len(varCfg.StringValue) == 0 && len(varCfg.ListValue) == 0 && len(varCfg.Default) > 0 {
 			if _, err := varCfg.Value(); err != nil && len(varCfg.Default) > 0 {
 
-				SetVar(&varCfg, varCfg.Default)
-				//varCfg.StringValue = varCfg.Default
+				SetVarValue(&varCfg, varCfg.Default)
 			}
 
 			VarCfgs[varName] = varCfg
@@ -234,9 +273,7 @@ func initVars(varMap map[string]interface{}) {
 			for _, elem := range typeVal {
 
 				entry := VarCfgs[varName]
-				SetVar(&entry, append(entry.ListValue, elem.(string)))
-
-				//entry.ListValue = append(entry.ListValue, elem.(string))
+				SetVarValue(&entry, append(entry.ListValue, elem.(string)))
 
 				VarCfgs[varName] = entry
 			}
@@ -265,6 +302,10 @@ var tt = template.New("variable_parser")
 
 func render(tmpl string, varCfgs map[string]VarCfg) string {
 
+	if len(tmpl) == 0 {
+		return ""
+	}
+
 	/*
 	   Converting from the template format established in the perl version
 	*/
@@ -280,9 +321,9 @@ func render(tmpl string, varCfgs map[string]VarCfg) string {
 	return renderBuf.String()
 }
 
-func assignIfSet(commandCfg map[string]interface{}, key string, field *string) {
+func assignIfSet[T string | []string](commandCfg map[string]interface{}, key string, field *T) {
 	if commandCfg[key] != nil {
-		*field = commandCfg[key].(string)
+		*field = commandCfg[key].(T)
 	}
 }
 
@@ -296,9 +337,15 @@ func initBlockCommands(block *Block) {
 		assignIfSet(command, "diag", &Command.Diag)
 		assignIfSet(command, "dir", &Command.Dir)
 		assignIfSet(command, "condition", &Command.Condition)
+		assignIfSet(command, "shell", &Command.Shell)
+		assignIfSet(command, "shell_args", &Command.ShellArgs)
+
+		checkSetDefault(&Command.Shell, block.Shell)
+		checkSetDefault(&Command.ShellArgs, block.ShellArgs)
 
 		if command["for-vars"] != nil {
 			switch typeVal := command["for-vars"].(type) {
+			/* inline list */
 			case []interface{}:
 
 				for _, elem := range typeVal {
@@ -307,6 +354,7 @@ func initBlockCommands(block *Block) {
 
 				}
 
+			/* name of list */
 			case string:
 
 				if list := VarCfgs[typeVal]; list.ListValue != nil {
@@ -326,15 +374,15 @@ func initBlockCommands(block *Block) {
 	block.CommandsRaw = nil
 }
 
-func processBlock(block Block) {
+type ExecConfig struct {
+	Cmd    string
+	Args   []string
+	Stdout io.Writer
+	Stderr io.Writer
+	Dir    string
+}
 
-	initVars(block.Vars)
-	initBlockCommands(&block)
-
-	config := ExecConfig{
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
+func processBlock(block Block, config ExecConfig) {
 
 	if len(block.Dir) > 0 {
 		config.Dir = block.Dir
@@ -352,14 +400,6 @@ func processBlock(block Block) {
 	runCommandsWithConfig(block.Commands, config)
 }
 
-type ExecConfig struct {
-	Cmd    string
-	Args   []string
-	Stdout io.Writer
-	Stderr io.Writer
-	Dir    string
-}
-
 func runCommandsWithConfig(commands []Command, config ExecConfig) {
 	for _, command := range commands {
 
@@ -373,9 +413,7 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 		   by value? */
 		execConfig := config
 
-		if len(command.Dir) > 0 {
-			execConfig.Dir = render(command.Dir, VarCfgs)
-		}
+		checkSetOverride(&execConfig.Dir, render(command.Dir, VarCfgs))
 
 		/* This behaves slightly different from the perl version
 		       1. Diag wont override Exec and both can run if defined
@@ -397,8 +435,9 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 			}
 
 			if len(command.Exec) > 0 {
-				execConfig.Cmd = "/bin/bash"
-				execConfig.Args = []string{"-c", render(command.Exec, varCfgs)}
+				execConfig.Cmd = command.Shell
+				execConfig.Args = command.ShellArgs
+				execConfig.Args = append(execConfig.Args, render(command.Exec, varCfgs))
 
 				execCommand(execConfig)
 			}
