@@ -407,10 +407,6 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 			continue
 		}
 
-		/* local copy. I don't know why this is needed
-		   to stop changes made to config outside this
-		   scope.  Isn't Go suppose to pass structs
-		   by value? */
 		execConfig := config
 
 		checkSetOverride(&execConfig.Dir, render(command.Dir, VarCfgs))
