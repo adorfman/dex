@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	v1 "dex/v1"
 	v2 "dex/v2"
@@ -57,14 +58,41 @@ dex file that exists.
 */
 func findConfigFile() (string, error) {
 
-	/* DEX_FILE environment variable takes priority */
+	/* If the first block parameter is "~~", this parameter
+	       is removed and we check for dex files in the users
+		   home directory instead of the current working directory
+	*/
+	useHome := false
+	if len(os.Args) > 1 && os.Args[1] == "~~" {
+		os.Args = os.Args[1:]
+		useHome = true
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if useHome && err != nil {
+		fmt.Fprintf(os.Stderr, "error finding home directory: %v", err)
+	}
+
+	/* DEX_FILE environment variable takes priority. If ~~ was set
+	   then we check for the DEX_FILE path relative to the users
+	   home directory.
+	*/
 	if dexFileEnv := os.Getenv("DEX_FILE"); len(dexFileEnv) > 0 {
+		if useHome {
+			dexFileEnv = filepath.Join(homeDir, dexFileEnv)
+		}
+
 		if _, err := os.Stat(dexFileEnv); err == nil {
 			return dexFileEnv, nil
 		}
 	}
 
 	for _, filename := range configFileLocations {
+
+		if useHome {
+			filename = filepath.Join(homeDir, filename)
+		}
+
 		if _, err := os.Stat(filename); err == nil {
 			return filename, nil
 		}
