@@ -47,7 +47,7 @@ func SetVarValue[Value VarValue](varCfg *VarCfg, value Value) error {
 	case string:
 		varCfg.StringValue = typeValue
 	default:
-		return errors.New("unknown VarCfg value typ")
+		return errors.New("unknown VarCfg value type")
 	}
 
 	return nil
@@ -103,6 +103,26 @@ func checkSetOverride[D VarValue](field *D, override D) {
 }
 
 /*
+Attempt to parse the YAML content into DexFile2 format
+and do some sanity checks and set defaults.
+*/
+func ParseConfig(configData []byte) (DexFile2, error) {
+
+	var dexFile DexFile2
+
+	if err := yaml.Unmarshal([]byte(configData), &dexFile); err != nil {
+		return DexFile2{}, err
+	} else if dexFile.Version != 2 {
+		return DexFile2{}, errors.New("incorrect version number")
+	}
+
+	checkSetDefault(&dexFile.Shell, DefaultShell)
+	checkSetDefault(&dexFile.ShellArgs, DefaultShellArgs)
+
+	return dexFile, nil
+}
+
+/*
 1. If there was no commands to run, display the menu of commands the DexFile knows about.
 2. If there was a command to run, find it and run it.  If it's invalid, say so and display the menu.
 */
@@ -150,26 +170,6 @@ func initBlockFromPath(dexFile DexFile2, blockPath []string) (Block, error) {
 	initBlockCommands(&block)
 
 	return block, nil
-}
-
-/*
-Attempt to parse the YAML content into DexFile2 format
-and do some sanity checks and set defaults.
-*/
-func ParseConfig(configData []byte) (DexFile2, error) {
-
-	var dexFile DexFile2
-
-	if err := yaml.Unmarshal([]byte(configData), &dexFile); err != nil {
-		return DexFile2{}, err
-	} else if dexFile.Version != 2 {
-		return DexFile2{}, errors.New("incorrect version number")
-	}
-
-	checkSetDefault(&dexFile.Shell, DefaultShell)
-	checkSetDefault(&dexFile.ShellArgs, DefaultShellArgs)
-
-	return dexFile, nil
 }
 
 /*
@@ -227,6 +227,11 @@ func initVars(varMap map[string]interface{}) {
 					Stdout: &output,
 				}
 
+				/* TODO? Allow setting custom shell for this.
+				   Would be a just convenience since you already
+				   do something like:
+				   from_command: '/usr/bin/zsh -c "echo hello"'
+				*/
 				execConfig.Cmd = "/bin/bash"
 				execConfig.Args = []string{"-c", varCfg.FromCommand}
 
@@ -321,7 +326,7 @@ func assignIfSet[T string | []string](commandCfg map[string]interface{}, key str
 func initBlockCommands(block *Block) {
 	for _, command := range block.CommandsRaw {
 
-		/* All this because for-vars can be a string referncing a list or list */
+		/* All this because for-vars can be a string referencing a list or list */
 		Command := Command{}
 
 		assignIfSet(command, "exec", &Command.Exec)
