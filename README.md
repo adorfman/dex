@@ -172,11 +172,11 @@ You can also configure variables to be initialized from the output of an externa
 
 ``` 
 
-The `from_command` attribute will execute the set command and, assuming the command exits with a value of 0, assign its' STDOUT to the value of the variable. If the command returns multiple lines the variable will become a list containing
+The `from-command` attribute will execute the set command and, assuming the command exits with a value of 0, assign its' STDOUT to the value of the variable. If the command returns multiple lines the variable will become a list containing
 each line.  If the command exits with a non-zero value then the variable will be assigned the `default` attribute value
 or remain undefined if no 'default' attribute is provided.
 
-`from_env` will check for a matching environment variable and if found will assign that value to the variable. When the environment variable is not defined the 'default' attribute value is used.
+`from-env` will check for a matching environment variable and if found will assign that value to the variable. When the environment variable is not defined the 'default' attribute value is used.
 
 `blocks` is similar to the root list in the Standard Format. It defines a list of named blocks of commands and nestable sub blocks of commands to run.  
 
