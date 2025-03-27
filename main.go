@@ -15,27 +15,25 @@ var configFileLocations = []string{"dex.yaml", "dex.yml", ".dex.yaml", ".dex.yml
 /*
 1. Try to locate a dex file, throw an error and exit if there is no config file.
 2. Load the content of the dex file
-3. Attempt to parse the dex file as v1 YAML.
+3. Attempt to parse the dex file as v1 and then v2 YAML.
 */
 func main() {
 
 	/* Find the name of the dex file we're using. */
-	filename, err := findConfigFile()
-	if err != nil {
+	if filename, err := findConfigFile(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	}
-
-	dexData, err := loadDexFile(filename)
-
-	if err != nil {
+		/* Load the raw yaml data */
+	} else if dexData, err := loadDexFile(filename); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	}
-
-	if dexFile, err := v1.ParseConfig(dexData); err == nil {
+		/* Attempt parsing as v1 */
+	} else if dexFile, err := v1.ParseConfig(dexData); err == nil {
 		v1.Run(dexFile, os.Args)
+		/* Attempt parsing as v1 */
 	} else if dexFile, err := v2.ParseConfig(dexData); err == nil {
 		v2.Run(dexFile, os.Args)
+		/* failure */
 	} else {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -44,26 +42,18 @@ func main() {
 
 func loadDexFile(filename string) ([]byte, error) {
 
-	fileContent, err := os.Open(filename)
-	if err != nil {
-		fmt.Printf("yamlFile.Get err #%v ", err)
-		return []byte{}, err
+	if fileContent, err := os.Open(filename); err != nil {
+		return []byte{}, fmt.Errorf("yamlFile.Get err #%s", err)
+	} else if dexData, err := io.ReadAll(fileContent); err != nil {
+		return []byte{}, fmt.Errorf("yamlFile.Get err #%v ", err)
+	} else {
+		return dexData, err
 	}
-
-	dexData, err := io.ReadAll(fileContent)
-
-	if err != nil {
-		fmt.Printf("yamlFile.Get err #%v ", err)
-		return []byte{}, err
-	}
-
-	return dexData, err
 }
 
 /*
 Search through the config_files array and return the first
-
-	dex file that exists.
+dex file that exists.
 */
 func findConfigFile() (string, error) {
 

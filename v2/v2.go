@@ -54,13 +54,13 @@ func SetVarValue[Value VarValue](varCfg *VarCfg, value Value) error {
 }
 
 type Command struct {
-	Exec      string   `yaml:"exec"`
-	Diag      string   `yaml:"diag"`
-	Dir       string   `yaml:"dir"`
-	ForVars   []string `yaml:"for-vars"`
-	Shell     string   `yaml:"shell"`
-	ShellArgs []string `yaml:"shell_args"`
-	Condition string   `yaml:"condition"`
+	Exec      string
+	Diag      string
+	Dir       string
+	ForVars   []string
+	Shell     string
+	ShellArgs []string
+	Condition string
 }
 
 type Block struct {
@@ -131,8 +131,6 @@ func Run(dexFile DexFile2, args []string) {
 		Stderr: os.Stderr,
 	}
 
-	/* Found block.  Init top level variables and process the
-	   block and its commands */
 	processBlock(block, config)
 }
 
@@ -140,8 +138,6 @@ func initBlockFromPath(dexFile DexFile2, blockPath []string) (Block, error) {
 
 	block, err := resolveCmdToCodeblock(dexFile.Blocks, blockPath)
 
-	/* No commands were found from the arguments the user passed:
-	   show error, menu and exit */
 	if err != nil {
 		return Block{}, fmt.Errorf("error: No commands were found at %v\n\nSee the menu", blockPath[1:])
 	}
@@ -346,7 +342,6 @@ func initBlockCommands(block *Block) {
 				for _, elem := range typeVal {
 					Command.ForVars = append(Command.ForVars, elem.(string))
 				}
-
 			/* name of list */
 			case string:
 
@@ -386,7 +381,6 @@ func processBlock(block Block, config ExecConfig) {
 		} else {
 			config.Dir = dir
 		}
-
 	}
 
 	runCommandsWithConfig(block.Commands, config)
@@ -406,7 +400,6 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 		/* This behaves slightly different from the perl version
 		   1. Diag wont override Exec and both can run if defined
 		   2. Diag and Exec will both be looped with for-vars
-
 		*/
 		for index, value := range command.ForVars {
 
@@ -430,7 +423,6 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 				execCommand(execConfig)
 			}
 		}
-
 	}
 }
 
@@ -449,7 +441,6 @@ func execCommand(config ExecConfig) int {
 		} else {
 			return 1
 		}
-
 	}
 
 	return 0
