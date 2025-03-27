@@ -87,7 +87,7 @@ var DefaultShellArgs = []string{"-c"}
 var VarCfgs = map[string]VarCfg{}
 
 /* Helper function to set default value if field value is unset */
-func checkSetDefault[D string | []string](field *D, def D) {
+func checkSetDefault[D VarValue](field *D, def D) {
 
 	if len(*field) == 0 {
 		*field = def
@@ -95,7 +95,7 @@ func checkSetDefault[D string | []string](field *D, def D) {
 }
 
 /* Helper function to set field value if override value is set */
-func checkSetOverride[D string | []string](field *D, override D) {
+func checkSetOverride[D VarValue](field *D, override D) {
 
 	if len(override) != 0 {
 		*field = override
