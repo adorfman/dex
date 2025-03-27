@@ -401,7 +401,7 @@ blocks:
 version: 2
 vars:
   global_string:
-    from_env: TESTENV 
+    from-env: TESTENV 
   not_set:
     from_env: TESTENV_UNSET 
     default: fizzbizz 
@@ -429,7 +429,7 @@ blocks:
 version: 2
 vars:
   command_string:
-    from_command: echo "c var" 
+    from-command: echo "c var" 
   command_list:
     from_command: echo -en "foo\nbar\nbazz" 
 
@@ -583,7 +583,7 @@ blocks:
     desc: this is a command description
     vars:
       start_dir: 
-        from_command: pwd
+        from-command: pwd
     commands: 
       - exec: echo $(pwd)
         dir:  ".." 

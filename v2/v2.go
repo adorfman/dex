@@ -19,9 +19,9 @@ import (
 type VarCfg struct {
 	StringValue string
 	ListValue   []string
-	FromCommand string `yaml:"from_command"`
-	FromEnv     string `yaml:"from_env"`
-	Default     string `yaml:"default"`
+	FromCommand string
+	FromEnv     string
+	Default     string
 }
 
 func (varCfg VarCfg) Value() (any, error) {
@@ -202,6 +202,19 @@ func resolveCmdToCodeblock(blocks []Block, cmds []string) (Block, error) {
 	return Block{}, errors.New("could not find command")
 }
 
+/* helper function that checks multiple keys for value */
+func checkKeys[T VarValue](cfg map[string]interface{}, keys []string) (T, bool) {
+	var empty T
+
+	for _, key := range keys {
+		if cfg[key] != nil {
+			return cfg[key].(T), true
+		}
+	}
+
+	return empty, false
+}
+
 func initVars(varMap map[string]interface{}) {
 	for varName, value := range varMap {
 
@@ -211,15 +224,16 @@ func initVars(varMap map[string]interface{}) {
 
 			varCfg := VarCfg{}
 
-			if typeVal["from_env"] != nil {
-				varCfg.FromEnv = typeVal["from_env"].(string)
+			if fromEnv, ok := checkKeys[string](typeVal, []string{"from-env", "from_env"}); ok {
+				varCfg.FromEnv = fromEnv
 				if envVal := os.Getenv(varCfg.FromEnv); len(envVal) > 0 {
 					varCfg.StringValue = envVal
 				}
 			}
 
-			if typeVal["from_command"] != nil {
-				varCfg.FromCommand = typeVal["from_command"].(string)
+			if fromCommand, ok := checkKeys[string](typeVal, []string{"from-command", "from_command"}); ok {
+
+				varCfg.FromCommand = fromCommand //typeVal["from_command"].(string)
 
 				var output bytes.Buffer
 

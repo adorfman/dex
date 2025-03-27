@@ -30,7 +30,7 @@ func main() {
 		/* Attempt parsing as v1 */
 	} else if dexFile, err := v1.ParseConfig(dexData); err == nil {
 		v1.Run(dexFile, os.Args)
-		/* Attempt parsing as v1 */
+		/* Attempt parsing as v2 */
 	} else if dexFile, err := v2.ParseConfig(dexData); err == nil {
 		v2.Run(dexFile, os.Args)
 		/* failure */
