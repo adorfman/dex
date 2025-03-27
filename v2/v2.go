@@ -288,7 +288,7 @@ func initVars(varMap map[string]interface{}) {
 	}
 }
 
-var fixupRe = regexp.MustCompile(`\[%\s*(\S+)\s*%\]`)
+var fixupRe = regexp.MustCompile(`\[%\s*([^\s%]+)\s*%\]`)
 var tt = template.New("variable_parser")
 
 func render(tmpl string, varCfgs map[string]VarCfg) string {

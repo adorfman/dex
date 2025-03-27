@@ -499,10 +499,10 @@ blocks:
       string_var: "from block"
       int_var: 3
     commands:
-       - exec: echo "[% global_string %] [% string_var %] [% int_var %]"
+       - exec: echo "[% global_string %] [%string_var%]-[%int_var%]"
 `,
 			Blockpath:  []string{"block_vars"},
-			CommandOut: "foobar from block 3\n",
+			CommandOut: "foobar from block-3\n",
 		},
 		{
 			Name: "Diag",
