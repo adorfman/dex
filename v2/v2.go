@@ -387,6 +387,9 @@ func processBlock(block Block, config ExecConfig) {
 }
 
 func runCommandsWithConfig(commands []Command, config ExecConfig) {
+
+	cwd := config.Dir
+
 	for _, command := range commands {
 
 		if exit := checkCommandCondition(command.Condition, VarCfgs); exit != 0 {
@@ -395,8 +398,11 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 
 		execConfig := config
 
-		checkSetOverride(&execConfig.Dir, render(command.Dir, VarCfgs))
+		/* Override the cwd so that the directory update is
+		   preserved until another command updates it */
+		checkSetOverride(&cwd, render(command.Dir, VarCfgs))
 
+		execConfig.Dir = cwd
 		/* This behaves slightly different from the perl version
 		   1. Diag wont override Exec and both can run if defined
 		   2. Diag and Exec will both be looped with for-vars

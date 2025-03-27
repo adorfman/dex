@@ -581,11 +581,16 @@ version: 2
 blocks:
   - name: change_dir 
     desc: this is a command description
+    vars:
+      start_dir: 
+        from_command: pwd
     commands: 
-       - exec: echo $(pwd)
-         dir:  ".." 
-       - exec: echo $(pwd)
-
+      - exec: echo $(pwd)
+        dir:  ".." 
+      - exec: echo $(pwd)
+      - exec: echo $(pwd)
+        dir:  "[% start_dir %]" 
+      
 `,
 			Blockpath: []string{"change_dir"},
 			Custom: func(t *testing.T, test DexTest, opts map[string]interface{}) {
@@ -593,8 +598,9 @@ blocks:
 				output := opts["ouput"].(bytes.Buffer)
 
 				path, _ := os.Getwd()
+				newDir := filepath.Dir(path)
 
-				parentDir := filepath.Dir(path) + "\n" + path + "\n"
+				parentDir := newDir + "\n" + newDir + "\n" + path + "\n"
 
 				assert.Equal(t, parentDir, output.String())
 			},
