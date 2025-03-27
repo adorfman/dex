@@ -293,6 +293,7 @@ func initVars(varMap map[string]interface{}) {
 	}
 }
 
+/* Capture the variable name inside the perl template delimiters */
 var fixupRe = regexp.MustCompile(`\[%\s*([^\s%]+)\s*%\]`)
 var tt = template.New("variable_parser")
 
@@ -403,13 +404,13 @@ func runCommandsWithConfig(commands []Command, config ExecConfig) {
 
 		execConfig := config
 
-		/* Override the cwd so that the directory update is
-		   preserved until another command updates it */
+		/* Update cwd so that the directory update is
+		   preserved until another command changes it */
 		checkSetOverride(&cwd, render(command.Dir, VarCfgs))
 
 		execConfig.Dir = cwd
 		/* This behaves slightly different from the perl version
-		   1. Diag wont override Exec and both can run if defined
+		   1. Diag wont override Exec and both can run if both are defined
 		   2. Diag and Exec will both be looped with for-vars
 		*/
 		for index, value := range command.ForVars {

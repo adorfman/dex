@@ -25,7 +25,7 @@ blocks:
     commands: 
       - exec: echo from $0! 
 `,
-			Blockpath:  []string{"zsh command"},
+			BlockPath:  []string{"zsh command"},
 			CommandOut: "from /usr/bin/zsh!\n",
 		},
 		{
@@ -40,7 +40,7 @@ blocks:
     commands: 
       - exec: echo from $0! 
 `,
-			Blockpath:  []string{"block zsh command"},
+			BlockPath:  []string{"block zsh command"},
 			CommandOut: "from /usr/bin/zsh!\n",
 		},
 		{
@@ -56,7 +56,7 @@ blocks:
         shell: /usr/bin/zsh
       - exec: echo from $0! 
 `,
-			Blockpath:  []string{"zsh for one command"},
+			BlockPath:  []string{"zsh for one command"},
 			CommandOut: "from /usr/bin/zsh!\nfrom /bin/bash!\n",
 		},
 	}

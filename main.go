@@ -57,7 +57,7 @@ dex file that exists.
 */
 func findConfigFile() (string, error) {
 
-	/* DEX_FILE env takes priority */
+	/* DEX_FILE environment variable takes priority */
 	if dexFileEnv := os.Getenv("DEX_FILE"); len(dexFileEnv) > 0 {
 		if _, err := os.Stat(dexFileEnv); err == nil {
 			return dexFileEnv, nil

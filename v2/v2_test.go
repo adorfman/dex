@@ -53,7 +53,7 @@ func setupTestBlock(t *testing.T, test DexTest) (Block, *os.File, error) {
 
 	initVars(dexFile.Vars)
 
-	block, err := initBlockFromPath(dexFile, test.Blockpath)
+	block, err := initBlockFromPath(dexFile, test.BlockPath)
 
 	if err := check(t, err, "Error resolving command"); err != nil {
 		return Block{}, nil, err
@@ -65,9 +65,9 @@ func setupTestBlock(t *testing.T, test DexTest) (Block, *os.File, error) {
 type DexTest struct {
 	Name         string
 	Config       string
-	Dexfile      DexFile2
+	DexFile      DexFile2
 	MenuOut      string
-	Blockpath    []string
+	BlockPath    []string
 	Commands     []Command
 	CommandsRaw  []map[string]interface{}
 	CommandOut   string
@@ -85,7 +85,7 @@ version: 2
 blocks:
   - name: hello
     desc: this is a command description`,
-			Dexfile: DexFile2{
+			DexFile: DexFile2{
 				Version:   2,
 				Shell:     "/bin/bash",
 				ShellArgs: []string{"-c"},
@@ -123,7 +123,7 @@ blocks:
           - exec: systemctl stop server
           - exec: systemctl start server
 `,
-			Dexfile: DexFile2{
+			DexFile: DexFile2{
 				Version:   2,
 				Shell:     "/bin/zsh",
 				ShellArgs: []string{"-c"},
@@ -168,7 +168,7 @@ blocks:
 		dex_file, err := ParseConfig(yamlData)
 		check(t, err, "config file not found")
 
-		assert.Equal(t, test.Dexfile, dex_file)
+		assert.Equal(t, test.DexFile, dex_file)
 
 	}
 
@@ -244,13 +244,13 @@ blocks:
       - name: restart
         desc: restart the server
         commands: 
-          - exec: systemctl restart server
-          - exec: touch /.restarted 
+          - exec: restart server
+          - exec: touch .restarted 
 `,
-			Blockpath: []string{"server", "restart"},
+			BlockPath: []string{"server", "restart"},
 			CommandsRaw: []map[string]interface{}{
-				{"exec": "systemctl restart server"},
-				{"exec": "touch /.restarted"}},
+				{"exec": "restart server"},
+				{"exec": "touch .restarted"}},
 		},
 	}
 
@@ -264,7 +264,7 @@ blocks:
 
 		check(t, err, "Error parsing config")
 
-		block, err := resolveCmdToCodeblock(dex_file.Blocks, test.Blockpath)
+		block, err := resolveCmdToCodeblock(dex_file.Blocks, test.BlockPath)
 
 		check(t, err, "Error resolving command")
 
@@ -286,7 +286,7 @@ blocks:
     commands: 
        - exec: echo "hello world"
 `,
-			Blockpath:  []string{"hello_world"},
+			BlockPath:  []string{"hello_world"},
 			CommandOut: "hello world\n",
 		},
 	}
@@ -334,7 +334,7 @@ blocks:
     commands: 
        - exec: echo "hello world"
 `,
-			Blockpath:  []string{"hello_world"},
+			BlockPath:  []string{"hello_world"},
 			CommandOut: "hello world\n",
 			ExpectedVars: map[string]VarCfg{
 				"string_var": {
@@ -375,7 +375,7 @@ blocks:
       string_var: "other local block var"
 
 `,
-			Blockpath:  []string{"block_vars"},
+			BlockPath:  []string{"block_vars"},
 			CommandOut: "hello world\n",
 			ExpectedVars: map[string]VarCfg{
 				"global_string": {
@@ -410,7 +410,7 @@ blocks:
   - name: block_vars
     desc: this is a command description
 `,
-			Blockpath: []string{"block_vars"},
+			BlockPath: []string{"block_vars"},
 			ExpectedVars: map[string]VarCfg{
 				"global_string": {
 					FromEnv:     "TESTENV",
@@ -437,7 +437,7 @@ blocks:
   - name: block_vars
     desc: this is a command description
 `,
-			Blockpath: []string{"block_vars"},
+			BlockPath: []string{"block_vars"},
 			ExpectedVars: map[string]VarCfg{
 				"command_string": {
 					FromCommand: "echo \"c var\"",
@@ -482,7 +482,7 @@ blocks:
     commands: 
        - exec: echo "[%string_var%]"
 `,
-			Blockpath:  []string{"hello_world"},
+			BlockPath:  []string{"hello_world"},
 			CommandOut: "hi there\n",
 		},
 		{
@@ -501,7 +501,7 @@ blocks:
     commands:
        - exec: echo "[% global_string %] [%string_var%]-[%int_var%]"
 `,
-			Blockpath:  []string{"block_vars"},
+			BlockPath:  []string{"block_vars"},
 			CommandOut: "foobar from block-3\n",
 		},
 		{
@@ -520,7 +520,7 @@ blocks:
     commands:
        - diag: "[% global_string %] [% string_var %] [% int_var %]"
 `,
-			Blockpath:  []string{"diag_command"},
+			BlockPath:  []string{"diag_command"},
 			CommandOut: "foobar from block 4\n",
 		},
 	}
@@ -562,7 +562,7 @@ blocks:
     commands: 
        - exec: echo $(pwd)
 `,
-			Blockpath: []string{"change_dir"},
+			BlockPath: []string{"change_dir"},
 			Custom: func(t *testing.T, test DexTest, opts map[string]interface{}) {
 
 				output := opts["ouput"].(bytes.Buffer)
@@ -592,7 +592,7 @@ blocks:
         dir:  "[% start_dir %]" 
       
 `,
-			Blockpath: []string{"change_dir"},
+			BlockPath: []string{"change_dir"},
 			Custom: func(t *testing.T, test DexTest, opts map[string]interface{}) {
 
 				output := opts["ouput"].(bytes.Buffer)
@@ -648,7 +648,7 @@ blocks:
           - two
           - three
 `,
-			Blockpath:  []string{"loop_vars"},
+			BlockPath:  []string{"loop_vars"},
 			CommandOut: "0 one\n1 two\n2 three\n",
 		},
 		{
@@ -669,7 +669,7 @@ blocks:
       - exec: echo [% some_string %] [% index %] [% var %] 
         for-vars: some_list 
 `,
-			Blockpath:  []string{"loop_vars"},
+			BlockPath:  []string{"loop_vars"},
 			CommandOut: "foobar 0 four\nfoobar 1 five\nfoobar 2 six\n",
 		},
 	}
@@ -716,7 +716,7 @@ blocks:
         condition: 1 -eq 0 
 
 `,
-			Blockpath:  []string{"condition commands"},
+			BlockPath:  []string{"condition commands"},
 			CommandOut: "condition true\n",
 		},
 		{
@@ -733,7 +733,7 @@ blocks:
       - exec: echo condition true 
         condition: 1 -eq [% conditionVal %] 
 `,
-			Blockpath:  []string{"condition commands"},
+			BlockPath:  []string{"condition commands"},
 			CommandOut: "condition true\n",
 		},
 	}
