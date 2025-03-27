@@ -69,10 +69,10 @@ type DexTest struct {
 	MenuOut      string
 	BlockPath    []string
 	Commands     []Command
-	CommandsRaw  []map[string]interface{}
+	CommandsRaw  []map[string]any
 	CommandOut   string
 	ExpectedVars map[string]VarCfg
-	Custom       func(t *testing.T, test DexTest, opts map[string]interface{})
+	Custom       func(t *testing.T, test DexTest, opts map[string]any)
 }
 
 func TestParseConfigFile(t *testing.T) {
@@ -136,19 +136,19 @@ blocks:
 								Name:        "start",
 								Desc:        "start the server",
 								Commands:    nil,
-								CommandsRaw: []map[string]interface{}{{"exec": "systemctl start server"}},
+								CommandsRaw: []map[string]any{{"exec": "systemctl start server"}},
 							},
 							{
 								Name:        "stop",
 								Desc:        "stop the server",
 								Commands:    nil,
-								CommandsRaw: []map[string]interface{}{{"exec": "systemctl stop server", "dir": "/home/slice"}},
+								CommandsRaw: []map[string]any{{"exec": "systemctl stop server", "dir": "/home/slice"}},
 							},
 							{
 								Name:     "restart",
 								Desc:     "restart the server",
 								Commands: nil,
-								CommandsRaw: []map[string]interface{}{
+								CommandsRaw: []map[string]any{
 									{"exec": "systemctl stop server"},
 									{"exec": "systemctl start server"}},
 							},
@@ -248,7 +248,7 @@ blocks:
           - exec: touch .restarted 
 `,
 			BlockPath: []string{"server", "restart"},
-			CommandsRaw: []map[string]interface{}{
+			CommandsRaw: []map[string]any{
 				{"exec": "restart server"},
 				{"exec": "touch .restarted"}},
 		},
@@ -563,7 +563,7 @@ blocks:
        - exec: echo $(pwd)
 `,
 			BlockPath: []string{"change_dir"},
-			Custom: func(t *testing.T, test DexTest, opts map[string]interface{}) {
+			Custom: func(t *testing.T, test DexTest, opts map[string]any) {
 
 				output := opts["ouput"].(bytes.Buffer)
 
@@ -593,7 +593,7 @@ blocks:
       
 `,
 			BlockPath: []string{"change_dir"},
-			Custom: func(t *testing.T, test DexTest, opts map[string]interface{}) {
+			Custom: func(t *testing.T, test DexTest, opts map[string]any) {
 
 				output := opts["ouput"].(bytes.Buffer)
 
@@ -626,7 +626,7 @@ blocks:
 
 		processBlock(block, config)
 
-		test.Custom(t, test, map[string]interface{}{"ouput": output})
+		test.Custom(t, test, map[string]any{"ouput": output})
 	}
 }
 

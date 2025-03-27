@@ -64,22 +64,22 @@ type Command struct {
 }
 
 type Block struct {
-	Name        string                   `yaml:"name"`
-	Desc        string                   `yaml:"desc"`
-	CommandsRaw []map[string]interface{} `yaml:"commands"`
-	Commands    []Command                `yaml:"Commands"`
-	Vars        map[string]interface{}   `yaml:"vars"`
-	Dir         string                   `yaml:"dir"`
-	Shell       string                   `yaml:"shell"`
-	ShellArgs   []string                 `yaml:"shell_args"`
-	Children    []Block                  `yaml:"children"`
+	Name        string           `yaml:"name"`
+	Desc        string           `yaml:"desc"`
+	CommandsRaw []map[string]any `yaml:"commands"`
+	Commands    []Command        `yaml:"Commands"`
+	Vars        map[string]any   `yaml:"vars"`
+	Dir         string           `yaml:"dir"`
+	Shell       string           `yaml:"shell"`
+	ShellArgs   []string         `yaml:"shell_args"`
+	Children    []Block          `yaml:"children"`
 }
 type DexFile2 struct {
-	Version   int                    `yaml:"version"`
-	Vars      map[string]interface{} `yaml:"vars"`
-	Blocks    []Block                `yaml:"blocks"`
-	Shell     string                 `yaml:"shell"`
-	ShellArgs []string               `yaml:"shell_args"`
+	Version   int            `yaml:"version"`
+	Vars      map[string]any `yaml:"vars"`
+	Blocks    []Block        `yaml:"blocks"`
+	Shell     string         `yaml:"shell"`
+	ShellArgs []string       `yaml:"shell_args"`
 }
 
 var DefaultShell = "/bin/bash"
@@ -203,7 +203,7 @@ func resolveCmdToCodeblock(blocks []Block, cmds []string) (Block, error) {
 }
 
 /* helper function that checks multiple keys for value */
-func checkKeys[T VarValue](cfg map[string]interface{}, keys []string) (T, bool) {
+func checkKeys[T VarValue](cfg map[string]any, keys []string) (T, bool) {
 	var empty T
 
 	for _, key := range keys {
@@ -215,12 +215,12 @@ func checkKeys[T VarValue](cfg map[string]interface{}, keys []string) (T, bool) 
 	return empty, false
 }
 
-func initVars(varMap map[string]interface{}) {
+func initVars(varMap map[string]any) {
 	for varName, value := range varMap {
 
 		switch typeVal := value.(type) {
 		/* VarCfg */
-		case map[string]interface{}:
+		case map[string]any:
 
 			varCfg := VarCfg{}
 
@@ -233,7 +233,7 @@ func initVars(varMap map[string]interface{}) {
 
 			if fromCommand, ok := checkKeys[string](typeVal, []string{"from-command", "from_command"}); ok {
 
-				varCfg.FromCommand = fromCommand //typeVal["from_command"].(string)
+				varCfg.FromCommand = fromCommand
 
 				var output bytes.Buffer
 
@@ -274,7 +274,7 @@ func initVars(varMap map[string]interface{}) {
 			VarCfgs[varName] = varCfg
 
 		/* List */
-		case []interface{}:
+		case []any:
 
 			VarCfgs[varName] = VarCfg{
 				ListValue: []string{},
@@ -332,7 +332,7 @@ func render(tmpl string, varCfgs map[string]VarCfg) string {
 	return renderBuf.String()
 }
 
-func assignIfSet[T string | []string](commandCfg map[string]interface{}, key string, field *T) {
+func assignIfSet[T string | []string](commandCfg map[string]any, key string, field *T) {
 	if commandCfg[key] != nil {
 		*field = commandCfg[key].(T)
 	}
@@ -357,7 +357,7 @@ func initBlockCommands(block *Block) {
 		if command["for-vars"] != nil {
 			switch typeVal := command["for-vars"].(type) {
 			/* inline list */
-			case []interface{}:
+			case []any:
 
 				for _, elem := range typeVal {
 					Command.ForVars = append(Command.ForVars, elem.(string))
