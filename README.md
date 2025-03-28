@@ -112,6 +112,9 @@ prod                    : Manage the production cluster.
     run-playbook            : Run the ansible playbook on the development machine.
     edit-vault              : Edit the vault file.
 ```
+### Home Directory DexFile
+
+You can keep a DexFile in your home directory to store global commands you might want to use outside a project directory. To use this DexFile just set `~~` as the first parameter in your command list.
 
 ### Config File Version 2
 
